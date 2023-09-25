@@ -3,6 +3,41 @@ import numpy as np
 from keras.layers import Input, Add, Dense, MultiHeadAttention, LayerNormalization, Dropout, Flatten
 from keras.models import Model, load_model
 
+#*************** | create_model() | ****************#
+# El proposito de esta función es generar el modelo #
+# para resolver el problema CPMP con ayuda de capas #
+# de atención, una capa Flatten, una Dropout y      #
+# capaz Dense.                                      #
+#                                                   #
+# Input:                                            #
+#     - heads: número de cabezales que se usarán    #
+#              en la capa de atención.              #
+#     - S: Cantidad máxima de stacks que aceptará   #
+#          el modelo.                               #
+#     - H: Altura máxima de los stacks que          #
+#          aceptará el modelo.                      #
+#     - optimizer: Optimizador que usará el         #
+#                  modelo a la hora del             #
+#                  entrenamiento.                   #
+# Output:                                           #
+#     Retorna el modelo capaz de resolver el        #
+#     problema CPMP.                                #
+def create_model(heads, S, H , optimizer):
+    input = Input(shape= (S, H+1))
+
+    reshape = stack_attention(heads, H + 1, input, input)
+    reshape = stack_attention(heads, H + 1, reshape, input)
+
+    reshape = Flatten()(reshape)
+    hidden1 = Dense(H * 6, activation='sigmoid')(reshape)
+    dropout_1 = Dropout(0.5)(hidden1)
+    hidden2 = Dense(H * 6, activation='sigmoid')(dropout_1)
+    output = Dense(S,activation='softmax')(hidden2)
+
+    model = Model(inputs=input,outputs=output)
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics= ['mae', 'mse', 'accuracy'])
+
+    return model
 
 class CPMP_attention_model():
     def __init__(self) -> None:
