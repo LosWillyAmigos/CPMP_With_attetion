@@ -2,6 +2,7 @@ import keras
 import numpy as np
 from keras.layers import Input, Add, Dense, MultiHeadAttention, LayerNormalization, Dropout, Flatten
 from keras.models import Model, load_model
+import matplotlib.pyplot as plt
 
 #*************** | create_model() | ****************#
 # El proposito de esta función es generar el modelo #
@@ -22,7 +23,7 @@ from keras.models import Model, load_model
 # Output:                                           #
 #     Retorna el modelo capaz de resolver el        #
 #     problema CPMP.                                #
-def create_model(heads, S, H , optimizer):
+"""def create_model(heads, S, H , optimizer):
     input = Input(shape= (S, H+1))
 
     reshape = stack_attention(heads, H + 1, input, input)
@@ -37,7 +38,7 @@ def create_model(heads, S, H , optimizer):
     model = Model(inputs=input,outputs=output)
     model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics= ['mae', 'mse', 'accuracy'])
 
-    return model
+    return model"""
 
 class CPMP_attention_model():
     def __init__(self) -> None:
@@ -56,9 +57,8 @@ class CPMP_attention_model():
         # capa de feed para que el modelo pueda aprender
         layer = Dense(num_neurons, activation='sigmoid')(input)
         layer = Dense(num_neurons)(layer)
-
         return layer
-
+    
     def __attention_layer(self, heads: int, d_model: int, reshape: None) -> MultiHeadAttention:
         attention = MultiHeadAttention(num_heads=heads, key_dim=d_model)(reshape, reshape)
         return attention
@@ -270,27 +270,63 @@ class CPMP_attention_model():
             print('Models have not been initialized.')
             return
 
+        name_img_so = name + '_so_' + str(self.__S) + 'x' + str(self.__H) + '.png'
+        name_img_sd = name + '_sd_' + str(self.__S) + 'x' + str(self.__H) + '.png'
+
         keras.utils.plot_model(self.__model_so, show_shapes=show_shapes,
-                               to_file=name + '_so_' + str(self.__S) + 'x' + str(self.__H) + '.png')
+                               to_file= name_img_so)
         keras.utils.plot_model(self.__model_sd, show_shapes=show_shapes,
-                               to_file=name + '_sd_' + str(self.__S) + 'x' + str(self.__H) + '.png')
+                               to_file= name_img_sd)
+
+        img_so = plt.imread(name_img_so)
+        img_sd = plt.imread(name_img_sd)
+        fig, axs = plt.subplots(1, 2, figsize= (20, 25))
+
+        axs[0].imshow(img_so)
+        axs[0].set_title('Source Stack Model')
+        axs[0].axis('off')
+
+        axs[1].imshow(img_sd)
+        axs[1].set_title('Target Stack Model')
+        axs[1].axis('off')
+
+        plt.subplots_adjust(wspace= 0.1)
+        plt.tight_layout()
+        plt.show()
+
 
     def plot_model_so(self, name: str = 'model', show_shapes: bool = True) -> None:
         if self.__model_so is None:
             print('Model have not been initialized.')
             return
 
+        name_img = name + '_so_' + str(self.__S) + 'x' + str(self.__H) + '.png'
+
         keras.utils.plot_model(self.__model_so, show_shapes=show_shapes,
-                               to_file=name + '_so_' + str(self.__S) + 'x' + str(self.__H) + '.png')
+                               to_file= name_img)
+
+        imagen = plt.imread(name_img)
+        plt.figure(figsize=(20, 25))
+        plt.imshow(imagen)
+        plt.axis('off')
+        plt.show()
+
 
     def plot_model_sd(self, name: str = 'model', show_shapes: bool = True) -> None:
         if self.__model_sd is None:
             print('Model have not been initialized.')
             return
 
-        keras.utils.plot_model(self.__model_sd, show_shapes=show_shapes,
-                               to_file=name + '_sd_' + str(self.__S) + 'x' + str(self.__H) + '.png')
+        name_img = name + '_sd_' + str(self.__S) + 'x' + str(self.__H) + '.png'
 
+        keras.utils.plot_model(self.__model_sd, show_shapes=show_shapes,
+                               to_file= name_img)
+
+        imagen = plt.imread(name_img)
+        plt.figure(figsize=(20, 25))
+        plt.imshow(imagen)
+        plt.axis('off')
+        plt.show()
 
     def create_model_sd(self, num_layer_attention_add: int = 1,
                         heads: int = 5, S: int = 5, H: int = 5,
