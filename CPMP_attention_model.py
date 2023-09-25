@@ -88,7 +88,7 @@ class CPMP_attention_model():
         output = Dense(S, activation='softmax')(hidden2)
 
         model = Model(inputs=input, outputs=output)
-        model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['mae', 'mse', 'accuracy'])
+        model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['mae', 'mse'])
 
         return model
 
