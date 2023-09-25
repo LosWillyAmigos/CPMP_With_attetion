@@ -47,22 +47,76 @@ class CPMP_attention_model():
         self.__model_so = None
         self.__model_sd = None
 
+    #********* | __normalization_layer() | **********#
+    # El proposito de esta función es crear una      #
+    # capa que añada la salida de una capa de        #
+    # atención con el input realizado en el modelo   #
+    # para disminuir la perdida de memoria y por     #
+    # último aplicar una capa de normalización.      # 
+    #                                                #
+    # Input:                                         #
+    #     - input: Entrada que representa la         #
+    #              información a la cual se          #
+    #              le desea hacer incapie.           #
+    #     - attention: Output realizado por una      #
+    #                  capa de atención.             #
+    #                                                #
+    # Output:                                        #
+    #      Retorna la unión entre una capa de        #
+    #      normalización con la capa de unión.       #  
     def __normalization_layer(self, attention: None, input: None) -> LayerNormalization:
         layer = Add()([input, attention])
         layer = LayerNormalization(epsilon=1e-6)(layer)
 
         return layer
 
+    #************* | __feed_forward_layer() | **************#
+    # El proposito de esta función es generar una capa de   #
+    # feed para que el modelo pueda aprender de lo          #
+    # realizado en previamente a través de capas densas.    #
+    #                                                       #
+    # Input:                                                #
+    #     - input: Capa a la cual irá conectada.            #
+    #     - num_neuron: Número de neuronas.                 #
+    # Output:                                               #
+    #     Retorna las conexiones de 2 capas densas con      #
+    #     el número de neuronas asignadas.                  #
     def __feed_forward_layer(self, input: None, num_neurons: int) -> Dense:
         # capa de feed para que el modelo pueda aprender
         layer = Dense(num_neurons, activation='sigmoid')(input)
         layer = Dense(num_neurons)(layer)
         return layer
     
+    #****************** | __attention_layer() | *******************#
+    # El proposito de esta funicón es generar una capa             #
+    # MultiHeadAttention con un cierto número de cabezales y       #
+    # con las conexiones entregadas.                               #
+    #                                                              #
+    # Input:                                                       #
+    #     - heads: Número de cabezales.                            #
+    #     - d_model: Dimensión de cada entrada dentro de la        #
+    #                capa.                                         #
+    #     - reshape: La conexión a una capa adyacente.             #
+    # Output:                                                      #
+    #     Retorna la conexión a una capa MultiHeadAttention.       #
     def __attention_layer(self, heads: int, d_model: int, reshape: None) -> MultiHeadAttention:
         attention = MultiHeadAttention(num_heads=heads, key_dim=d_model)(reshape, reshape)
         return attention
 
+    #************** | __stack_attention() | **************#
+    # El proposito de esta función es generar un stack    #
+    # de capaz de atención.                               #
+    #                                                     #
+    # Input:                                              #
+    #     - heads: Número de cabezales dentro de la capa  #
+    #              de atención.                           #
+    #     - d_model: Dimensión de la entrada a la capa    #
+    #                de atención.                         #
+    #     - reshape: Capa de reshape realizado al input.  #
+    #     - input: Datos ingresados al modelo para        #
+    #              diminuir la perdida de memoria.        #
+    # Output:                                             #
+    #     Retorna todas las capas conectadas.             #
     def __stack_attention(self, heads: int, d_model: int, reshape: None, input: None) -> Dense:
         # por si se debe modificar la dimensión
         attention = self.__attention_layer(heads, d_model, reshape)
@@ -70,6 +124,26 @@ class CPMP_attention_model():
         feed = self.__feed_forward_layer(normalization, d_model)
 
         return feed
+
+    #***************** | __model() | *******************#
+    # El proposito de esta función es generar el modelo #
+    # para resolver el problema CPMP con ayuda de capas #
+    # de atención, una capa Flatten, una Dropout y      #
+    # capaz Dense.                                      #
+    #                                                   #
+    # Input:                                            #
+    #     - heads: número de cabezales que se usarán    #
+    #              en la capa de atención.              #
+    #     - S: Cantidad máxima de stacks que aceptará   #
+    #          el modelo.                               #
+    #     - H: Altura máxima de los stacks que          #
+    #          aceptará el modelo.                      #
+    #     - optimizer: Optimizador que usará el         #
+    #                  modelo a la hora del             #
+    #                  entrenamiento.                   #   
+    # Output:                                           #
+    #     Retorna el modelo capaz de resolver el        #
+    #     problema CPMP.                                #
 
     def __model(self, num_layer_attention_add: int = 1,
                 heads: int = 5, S: int = 5, H: int = 5,
