@@ -162,7 +162,7 @@ class CPMP_attention_model():
         output = Dense(S, activation='softmax')(hidden2)
 
         model = Model(inputs=input, outputs=output)
-        model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['mae', 'mse'])
+        model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics= ['mae', 'mse'])
 
         return model
 
@@ -241,6 +241,17 @@ class CPMP_attention_model():
         arr[idx] = 1
 
         return arr
+
+    """def __flatten_predict(self, predict_so: np.ndarray, 
+                        predict_sd: np.ndarray
+                        ) -> np.ndarray:
+        new_predict = np.zeros(self.__S * (self.__S - 1))
+        k = 0
+
+        for i in range(self.__S):
+            for j in range(self.__S - 1):""" 
+                
+
 
     def set_models(self, name_so: str, name_sd: str) -> None:
         self.__model_so = load_model(name_so)
