@@ -2,6 +2,7 @@ import keras
 import numpy as np
 from keras.layers import Input, Add, Dense, MultiHeadAttention, LayerNormalization, Dropout, Flatten
 from keras.models import Model, load_model
+from keras.losses import BinaryCrossentropy
 import matplotlib.pyplot as plt
 
 #*************** | create_model() | ****************#
@@ -162,7 +163,7 @@ class CPMP_attention_model():
         output = Dense(S, activation='softmax')(hidden2)
 
         model = Model(inputs=input, outputs=output)
-        model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics= ['mae', 'mse'])
+        model.compile(optimizer=optimizer, loss= 'binary_crossentropy', metrics= ['mae', 'mse'])
 
         return model
 
