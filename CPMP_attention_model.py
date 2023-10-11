@@ -188,7 +188,7 @@ class CPMP_attention_model():
         model_so = Model_CPMP(num_layer_attention_add, heads, S, H)(input)
         expand = LayerExpandOutput()(model_so)
         concat = ConcatenationLayer()([input, model_so])
-        model_sd = Model_CPMP(num_layer_attention_add, heads, S, H + 1)
+        model_sd = Model_CPMP(num_layer_attention_add, heads, S= S, H= H + 1)
 
         distributed = TimeDistributed(model_sd)(concat)
 
