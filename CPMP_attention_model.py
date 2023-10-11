@@ -224,6 +224,11 @@ class CPMP_attention_model():
         if self.__model is None:
             print('Model have not been initialized.')
             return
+        
+        historial = self.__model.fit(X_train, y_label, batch_size= batch_size, 
+                                     epochs= epochs, verbose= verbose)
+        
+        return historial
 
     def predict(self, state: np.ndarray) -> tuple:
         if self.__model is None:
