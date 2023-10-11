@@ -5,49 +5,41 @@ import numpy as np
 
 class Model_CPMP(Layer):
     def __init__(self, num_layer_attention_add: int = 1,
-                   heads: int = 5, S: int = 5, H: int = 5, ):
+                   heads: int = 5, S: int = 5, H: int = 5):
         super(Model_CPMP,self).__init__()
         self.__num_layer_attention_add = num_layer_attention_add
-        self.__heads = heads
-        self.__S = S
-        self.__H = H
+        self.__flatten = Flatten()
+        self.__dropout = Dropout(0.5)
+        self.__dense_1 = Dense(H * 6, activation= 'sigmoid')
+        self.__dense_5 = Dense(H * 6, activation= 'sigmoid')
+        self.__dense_2 = Dense(S, activation= 'sigmoid')
+        self.__dense_3 = Dense(H + 1, activation= 'sigmoid')
+        self.__dense_4 = Dense(H + 1)
+        self.__multihead_atention = MultiHeadAttention(num_heads= heads, key_dim= H + 1)
+        self.__normalization_layer = LayerNormalization(epsilon= 1e-6)
+        self.__add = Add()
 
     def call(self, input):
-        reshape = self.__stack_attention(self.__heads, self.__H + 1, input, input)
+        reshape = self.__multihead_atention(input, input)
+        add = self.__add([input, reshape])
+        normalization = self.__normalization_layer(add)
+        dense_3 = self.__dense_3(normalization)
+        dense_4 = self.__dense_4(dense_3)
+
         for i in range(self.__num_layer_attention_add):
-            reshape = self.__stack_attention(self.__heads, self.__H + 1, reshape, input)
+            reshape = self.__multihead_atention(dense_4, input)
+            add = self.__add([input, reshape])
+            normalization = self.__normalization_layer(add)
+            dense_3 = self.__dense_3(normalization)
+            dense_4 = self.__dense_4(dense_3)
 
-        reshape = Flatten()(reshape)
-        hidden1 = Dense(self.__H * 6, activation='sigmoid')(reshape)
-        dropout_1 = Dropout(0.5)(hidden1)
-        hidden2 = Dense(self.__H * 6, activation='sigmoid')(dropout_1)
-        output = Dense(self.__S, activation='sigmoid')(hidden2)
+        flatten = self.__flatten(dense_4)
+        dense_1 = self.__dense_1(flatten)
+        dropout_1 = self.__dropout(dense_1)
+        dense_5 = self.__dense_5(dropout_1)
+        dense_2 = self.__dense_2(dense_5)
 
-        return output
-    
-    def __feed_forward_layer(self, input: None, num_neurons: int) -> Dense:
-        # capa de feed para que el modelo pueda aprender
-        layer = Dense(num_neurons, activation='sigmoid')(input)
-        layer = Dense(num_neurons)(layer)
-        return layer
-    
-    def __attention_layer(self, heads: int, d_model: int, reshape: None) -> MultiHeadAttention:
-        attention = MultiHeadAttention(num_heads=heads, key_dim=d_model)(reshape, reshape)
-        return attention
-    
-    def __normalization_layer(self, attention: None, input: None) -> LayerNormalization:
-        layer = Add()([input, attention])
-        layer = LayerNormalization(epsilon=1e-6)(layer)
-
-        return layer
-    def __stack_attention(self, heads: int, d_model: int, reshape: None, input: None) -> Dense:
-        # por si se debe modificar la dimensión
-        attention = self.__attention_layer(heads, d_model, reshape)
-        normalization = self.__normalization_layer(input, attention)
-        feed = self.__feed_forward_layer(normalization, d_model)
-
-        return feed
-
+        return dense_2
 
 class ConcatenationLayer(Layer):
     def __init__(self, **kwargs):
