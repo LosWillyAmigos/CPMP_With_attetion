@@ -5,8 +5,10 @@ import numpy as np
 
 class Model_CPMP(Layer):
     def __init__(self, num_layer_attention_add: int = 1,
-                   heads: int = 5, S: int = 5, H: int = 5):
-        super(Model_CPMP,self).__init__()
+                 heads: int = 5, S: int = 5, H: int = 5
+                 ) -> None:
+        super(Model_CPMP, self).__init__()
+        
         self.__num_layer_attention_add = num_layer_attention_add
         self.__flatten = Flatten()
         self.__dropout = Dropout(0.5)
@@ -19,7 +21,7 @@ class Model_CPMP(Layer):
         self.__normalization_layer = LayerNormalization(epsilon= 1e-6)
         self.__add = Add()
 
-    def call(self, input):
+    def call(self, input: tf.TensorArray) -> None:
         reshape = self.__multihead_atention(input, input)
         add = self.__add([input, reshape])
         normalization = self.__normalization_layer(add)
@@ -42,10 +44,10 @@ class Model_CPMP(Layer):
         return dense_2
 
 class ConcatenationLayer(Layer):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super(ConcatenationLayer, self).__init__(**kwargs)
 
-    def call(self, inputs):
+    def call(self, inputs: tf.TensorArray) -> None:
         matrix, labels = inputs
 
         # Crear una matriz identidad de la misma forma que los arreglos
@@ -64,7 +66,7 @@ class ConcatenationLayer(Layer):
         return results
     
 class LayerExpandOutput(Layer):
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super(LayerExpandOutput, self).__init__(**kwargs, trainable=False)
 
     def call(self, inputs):
