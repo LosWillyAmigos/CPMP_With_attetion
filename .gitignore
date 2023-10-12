@@ -2,11 +2,5 @@ CPMP-ML/
 images_models/
 pruebas.ipynb
 .idea/
-data/data_5x5_Multiple_sd.csv
-data/data_5x5_Multiple_so.csv
-data/data_7x7_Multiple_sd.csv
-data/data_7x7_Multiple_so.csv
-data/data_10x10.csv
-data/data_10x10_Multiple_sd.csv
-data/data_10x10_Multiple_so.csv
+data/
 __pycache__/
