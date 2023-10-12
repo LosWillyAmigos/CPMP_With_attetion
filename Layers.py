@@ -1,14 +1,13 @@
 from keras.layers import Layer
 from keras.layers import Concatenate, Flatten, Dense, Dropout, MultiHeadAttention, LayerNormalization, Add, Input
 import tensorflow as tf
-import numpy as np
 
 class Model_CPMP(Layer):
     def __init__(self, num_layer_attention_add: int = 1,
                  heads: int = 5, S: int = 5, H: int = 5
                  ) -> None:
         super(Model_CPMP, self).__init__()
-        
+
         self.__num_layer_attention_add = num_layer_attention_add
         self.__flatten = Flatten()
         self.__dropout = Dropout(0.5)
@@ -74,9 +73,17 @@ class LayerExpandOutput(Layer):
         expanded = tf.repeat(inputs, repeats= dim, axis= 1)
 
         return expanded
+    
+tf.keras.utils.get_custom_objects()['LayerExpandOutput'] = LayerExpandOutput
+
 class OutputMultiplication(Layer):
     def __init__(self) -> None:
         super(OutputMultiplication,self).__init__(trainable=False)
 
     def call(self, arr1: tf.TensorArray, arr2: tf.TensorArray) -> tf.TensorArray:
         return arr1 * arr2
+    
+tf.keras.utils.get_custom_objects()['LayerExpandOutput'] = LayerExpandOutput
+tf.keras.utils.get_custom_objects()['ConcatenationLayer'] = ConcatenationLayer
+tf.keras.utils.get_custom_objects()['OutputMultiplication'] = OutputMultiplication
+tf.keras.utils.get_custom_objects()['Model_CPMP'] = Model_CPMP
