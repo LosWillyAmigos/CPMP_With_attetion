@@ -56,10 +56,12 @@ class CPMP_attention_model():
         self.__model = model
 
     def set_model(self, name: str) -> None:
-        self.__model = load_model(name, custom_objects= {'Model_CPMP': Model_CPMP, 
-                                                         'OutputMultiplication': OutputMultiplication,
-                                                         'LayerExpandOutput': LayerExpandOutput,
-                                                         'ConcatenationLayer': ConcatenationLayer})
+        custom_objects = {'Model_CPMP': Model_CPMP, 
+                          'OutputMultiplication': OutputMultiplication,
+                          'LayerExpandOutput': LayerExpandOutput,
+                          'ConcatenationLayer': ConcatenationLayer}
+
+        self.__model = load_model(name, custom_objects= custom_objects)
 
         input_shape = self.__model.layers[0].input_shape[0]
         self.__S = input_shape[1]

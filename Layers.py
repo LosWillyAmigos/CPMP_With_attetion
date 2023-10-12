@@ -66,15 +66,14 @@ class ConcatenationLayer(Layer):
     
 class LayerExpandOutput(Layer):
     def __init__(self, **kwargs) -> None:
-        super(LayerExpandOutput, self).__init__(**kwargs, trainable=False)
+        super(LayerExpandOutput, self).__init__(**kwargs)
 
     def call(self, inputs):
         dim = tf.shape(inputs)[1]
-        expanded = tf.repeat(inputs, repeats= dim, axis= 1)
+        expanded = tf.repeat(inputs, repeats=dim, axis=1)
 
         return expanded
-    
-tf.keras.utils.get_custom_objects()['LayerExpandOutput'] = LayerExpandOutput
+
 
 class OutputMultiplication(Layer):
     def __init__(self) -> None:
