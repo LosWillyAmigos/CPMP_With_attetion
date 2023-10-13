@@ -81,8 +81,3 @@ class OutputMultiplication(Layer):
 
     def call(self, arr1: tf.TensorArray, arr2: tf.TensorArray) -> tf.TensorArray:
         return arr1 * arr2
-    
-tf.keras.utils.get_custom_objects()['LayerExpandOutput'] = LayerExpandOutput
-tf.keras.utils.get_custom_objects()['ConcatenationLayer'] = ConcatenationLayer
-tf.keras.utils.get_custom_objects()['OutputMultiplication'] = OutputMultiplication
-tf.keras.utils.get_custom_objects()['Model_CPMP'] = Model_CPMP
