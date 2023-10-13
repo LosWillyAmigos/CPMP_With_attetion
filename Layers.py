@@ -44,22 +44,19 @@ class Model_CPMP(Layer):
 
 class ConcatenationLayer(Layer):
     def __init__(self, **kwargs) -> None:
-        super(ConcatenationLayer, self).__init__(**kwargs)
+        super(ConcatenationLayer_2, self).__init__(**kwargs)
 
-    def call(self, inputs: tf.TensorArray) -> None:
-        matrix, labels = inputs
+    def call(self, matrix: tf.TensorArray) -> None:
 
-        # Crear una matriz identidad de la misma forma que los arreglos
-        matriz_identidad = tf.eye(labels.shape[-1], dtype=tf.float32)
+        # Crear una matriz identidad de tamaño S
+        matriz_identidad = tf.eye(matrix.shape[1], dtype=tf.float32)
 
-        # Multiplicar cada arreglo por la matriz identidad para obtener la matriz diagonal
-        matrices_diagonales = labels[:, :, tf.newaxis] * matriz_identidad
-
-        test = tf.expand_dims(matrices_diagonales, axis= -1)
+        test = tf.expand_dims(matriz_identidad, axis= -1)
+        test = tf.expand_dims(test, axis= 0)
 
         matrices_copiadas = tf.expand_dims(matrix, axis= 1)
-        matrices_copiadas = tf.repeat(matrices_copiadas, repeats= labels.shape[1], axis= 1)
-
+        matrices_copiadas = tf.repeat(matrices_copiadas, repeats= matriz_identidad.shape[1], axis= 1)
+        
         results = Concatenate(axis= 3)([matrices_copiadas, test])
 
         return results
@@ -82,7 +79,21 @@ class OutputMultiplication(Layer):
     def call(self, arr1: tf.TensorArray, arr2: tf.TensorArray) -> tf.TensorArray:
         return arr1 * arr2
     
-tf.keras.utils.get_custom_objects()['LayerExpandOutput'] = LayerExpandOutput
-tf.keras.utils.get_custom_objects()['ConcatenationLayer'] = ConcatenationLayer
-tf.keras.utils.get_custom_objects()['OutputMultiplication'] = OutputMultiplication
-tf.keras.utils.get_custom_objects()['Model_CPMP'] = Model_CPMP
+class ConcatenationLayer_2(Layer):
+    def __init__(self, **kwargs) -> None:
+        super(ConcatenationLayer, self).__init__(**kwargs)
+
+    def call(self, matrix: tf.TensorArray) -> None:
+
+        # Crear una matriz identidad de tamaño S
+        matriz_identidad = tf.eye(matrix.shape[-1], dtype=tf.float32)
+
+        test = tf.expand_dims(matriz_identidad, axis= -1)
+
+        matrices_copiadas = tf.expand_dims(matrix, axis= 1)
+        matrices_copiadas = tf.repeat(matrices_copiadas, repeats= matriz_identidad.shape[1], axis= 1)
+
+        results = Concatenate(axis= 3)([matrices_copiadas, test])
+
+        return results
+    
