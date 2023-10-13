@@ -44,7 +44,7 @@ class Model_CPMP(Layer):
 
 class ConcatenationLayer(Layer):
     def __init__(self, **kwargs) -> None:
-        super(ConcatenationLayer_2, self).__init__(**kwargs)
+        super(ConcatenationLayer, self).__init__(**kwargs)
 
     def call(self, matrix: tf.TensorArray) -> None:
 
@@ -60,6 +60,7 @@ class ConcatenationLayer(Layer):
         results = Concatenate(axis= 3)([matrices_copiadas, test])
 
         return results
+
     
 class LayerExpandOutput(Layer):
     def __init__(self, **kwargs) -> None:
@@ -79,21 +80,5 @@ class OutputMultiplication(Layer):
     def call(self, arr1: tf.TensorArray, arr2: tf.TensorArray) -> tf.TensorArray:
         return arr1 * arr2
     
-class ConcatenationLayer_2(Layer):
-    def __init__(self, **kwargs) -> None:
-        super(ConcatenationLayer, self).__init__(**kwargs)
 
-    def call(self, matrix: tf.TensorArray) -> None:
-
-        # Crear una matriz identidad de tamaño S
-        matriz_identidad = tf.eye(matrix.shape[-1], dtype=tf.float32)
-
-        test = tf.expand_dims(matriz_identidad, axis= -1)
-
-        matrices_copiadas = tf.expand_dims(matrix, axis= 1)
-        matrices_copiadas = tf.repeat(matrices_copiadas, repeats= matriz_identidad.shape[1], axis= 1)
-
-        results = Concatenate(axis= 3)([matrices_copiadas, test])
-
-        return results
     
