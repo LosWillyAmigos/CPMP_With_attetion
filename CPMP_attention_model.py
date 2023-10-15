@@ -40,11 +40,13 @@ class CPMP_attention_model():
         input = Input(shape=(S, H + 1), dtype= tf.float32)
 
         model_so = Model_CPMP(num_layer_attention_add, heads, S, H)(input)
+        
+        conc = ConcatenationLayer()([input, model_so])
+        
         expand = LayerExpandOutput()(model_so)
-        concat = ConcatenationLayer()([input, model_so])
         model_sd = Model_CPMP(num_layer_attention_add, heads, S= S, H= H + 1)
 
-        distributed = TimeDistributed(model_sd)(concat)
+        distributed = TimeDistributed(model_sd)(conc)
 
         flatten = Flatten()(distributed)
 
@@ -54,7 +56,7 @@ class CPMP_attention_model():
         model.compile(optimizer=optimizer, loss= 'binary_crossentropy', metrics= ['mae', 'mse'])
 
         self.__model = model
-
+        
     def set_model(self, name: str) -> None:
         custom_objects = {'Model_CPMP': Model_CPMP, 
                           'OutputMultiplication': OutputMultiplication,
