@@ -48,7 +48,7 @@ class ConcatenationLayer(Layer):
 
     def call(self, inputs: tf.TensorArray) -> None:
         matrix, labels = inputs
-
+        labels = tf.ones_like(labels)
         # Crear una matriz identidad de la misma forma que los arreglos
         matriz_identidad = tf.eye(labels.shape[-1], dtype=tf.float32)
 
@@ -63,6 +63,7 @@ class ConcatenationLayer(Layer):
         results = Concatenate(axis= 3)([matrices_copiadas, test])
 
         return results
+
     
 class LayerExpandOutput(Layer):
     def __init__(self, **kwargs) -> None:
@@ -81,3 +82,6 @@ class OutputMultiplication(Layer):
 
     def call(self, arr1: tf.TensorArray, arr2: tf.TensorArray) -> tf.TensorArray:
         return arr1 * arr2
+    
+
+    
