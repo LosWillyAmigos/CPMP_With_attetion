@@ -91,12 +91,12 @@ class CPMP_attention_model():
         
         return historial
 
-    def predict(self, state: np.ndarray) -> tuple:
+    def predict(self, state: np.ndarray, verbose: bool = False) -> tuple:
         if self.__model is None:
             print('Model have not been initialized.')
             return
 
-        return self.__model.predict(state)
+        return self.__model.predict(state, verbose= verbose)
 
     def plot_model(self, name: str = 'model', show_shapes: bool = True) -> None:
         if self.__model is None:
