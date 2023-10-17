@@ -47,17 +47,19 @@ class ConcatenationLayer(Layer):
         super(ConcatenationLayer, self).__init__(**kwargs)
 
     def call(self, inputs: tf.TensorArray) -> None:
-        matrix, labels = inputs
-        labels = tf.ones_like(labels)
+        labels = tf.ones(tf.shape(inputs)[1])
+        labels = tf.expand_dims(labels, axis= 0)
+        labels = tf.repeat(labels, repeats= tf.shape(inputs)[0], axis= 0)
+
         # Crear una matriz identidad de la misma forma que los arreglos
-        matriz_identidad = tf.eye(labels.shape[-1], dtype=tf.float32)
+        matriz_identidad = tf.eye(tf.shape(labels)[-1], dtype=tf.float32)
 
         # Multiplicar cada arreglo por la matriz identidad para obtener la matriz diagonal
         matrices_diagonales = labels[:, :, tf.newaxis] * matriz_identidad
 
         test = tf.expand_dims(matrices_diagonales, axis= -1)
 
-        matrices_copiadas = tf.expand_dims(matrix, axis= 1)
+        matrices_copiadas = tf.expand_dims(inputs, axis= 1)
         matrices_copiadas = tf.repeat(matrices_copiadas, repeats= labels.shape[1], axis= 1)
 
         results = Concatenate(axis= 3)([matrices_copiadas, test])
