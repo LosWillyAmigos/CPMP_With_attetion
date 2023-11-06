@@ -20,6 +20,7 @@ class Model_CPMP(Layer):
         self.__normalization_layer = LayerNormalization(epsilon= 1e-6)
         self.__add = Add()
 
+    @tf.autograph.experimental.do_not_convert
     def call(self, input: tf.TensorArray) -> None:
         reshape = self.__multihead_atention(input, input)
         add = self.__add([input, reshape])
@@ -77,6 +78,25 @@ class LayerExpandOutput(Layer):
 
         return expanded
 
+class Reduction(Layer):
+    def __init__(self) -> None:
+        super(Reduction, self).__init__(trainable=False)
+
+    def call(self, arr: tf.TensorArray, S) -> tf.TensorArray:
+        aux = [True for n in range(S * S)]
+        k = 0
+
+        for i in range(S):
+            for j in range(S):
+                if i == j:
+                    aux[k] = False
+                k += 1
+
+        mask = tf.constant(aux)
+        output = tf.boolean_mask(arr, mask, axis= 1)
+        output = tf.reshape(output, shape= (tf.shape(arr)[0], S * (S - 1)))
+
+        return output
 
 class OutputMultiplication(Layer):
     def __init__(self) -> None:
