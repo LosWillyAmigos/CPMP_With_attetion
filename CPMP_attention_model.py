@@ -1,9 +1,9 @@
 import keras
 import numpy as np
-from keras.layers import Input, Flatten
+from keras.layers import Input, Flatten, Dense, Dropout
 from keras.layers import TimeDistributed
 from keras.models import Model, load_model
-from Layers import ConcatenationLayer, LayerExpandOutput, OutputMultiplication, Model_CPMP
+from Layers import ConcatenationLayer, LayerExpandOutput, OutputMultiplication, Model_CPMP, Reduction
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
@@ -13,45 +13,37 @@ class CPMP_attention_model():
         self.__H = 0
         self.__model = None
 
-    #***************** | __model() | *******************#
-    # El proposito de esta función es generar el modelo #
-    # para resolver el problema CPMP con ayuda de capas #
-    # de atención, una capa Flatten, una Dropout y      #
-    # capaz Dense.                                      #
-    #                                                   #
-    # Input:                                            #
-    #     - heads: número de cabezales que se usarán    #
-    #              en la capa de atención.              #
-    #     - S: Cantidad máxima de stacks que aceptará   #
-    #          el modelo.                               #
-    #     - H: Altura máxima de los stacks que          #
-    #          aceptará el modelo.                      #
-    #     - optimizer: Optimizador que usará el         #
-    #                  modelo a la hora del             #
-    #                  entrenamiento.                   #   
-    # Output:                                           #
-    #     Retorna el modelo capaz de resolver el        #
-    #     problema CPMP.                                #
+    def get_memory(self) -> tuple:
+        states = []
+        labels = []
+
+        for data in self.__memory:
+            states.append(np.array(data[0]))
+            labels.append(np.array(data[1]))
+        
+        print(f"Memory size: {len(self.__memory)}")
+
+        return np.stack(states), np.stack(labels)
+
 
     def create_model(self, num_layer_attention_add: int = 1,
                 heads: int = 5, S: int = 5, H: int = 5,
                 optimizer: str | None = 'Adam'
                 ) -> Model:
+        self.__S = S
+        self.__H = H
+
         input = Input(shape=(S, H + 1), dtype= tf.float32)
 
         model_so = Model_CPMP(num_layer_attention_add, heads, S, H)(input)
-        
         conc = ConcatenationLayer()(input)
-        
         expand = LayerExpandOutput()(model_so)
         model_sd = Model_CPMP(num_layer_attention_add, heads, S= S, H= H + 1)
-
         distributed = TimeDistributed(model_sd)(conc)
-
         flatten = Flatten()(distributed)
+        dot = OutputMultiplication()(flatten, expand)
+        output = Reduction()(dot, S)
 
-        output = OutputMultiplication()(flatten, expand)
-    
         model = Model(inputs=input, outputs=output)
         model.compile(optimizer=optimizer, loss= 'binary_crossentropy', metrics= ['mae', 'mse'])
 
@@ -61,7 +53,8 @@ class CPMP_attention_model():
         custom_objects = {'Model_CPMP': Model_CPMP, 
                           'OutputMultiplication': OutputMultiplication,
                           'LayerExpandOutput': LayerExpandOutput,
-                          'ConcatenationLayer': ConcatenationLayer}
+                          'ConcatenationLayer': ConcatenationLayer,
+                          'Reduction': Reduction}
 
         self.__model = load_model(name, custom_objects= custom_objects)
 
@@ -72,7 +65,7 @@ class CPMP_attention_model():
     def get_dim(self) -> tuple:
         return self.__S, self.__H
 
-    def save_model(self, name) -> None:
+    def save_model(self, name: str) -> None:
         if self.__model is None:
             print('Model have not been initialized.')
             return
@@ -81,17 +74,17 @@ class CPMP_attention_model():
 
     def fit(self, X_train: np.ndarray, y_label: np.ndarray,
             batch_size: int = 32, epochs: int = 1, verbose: bool = True
-            ) -> tuple:
+            ) -> np.ndarray:
         if self.__model is None:
             print('Model have not been initialized.')
-            return
-        
+            return object
+
         historial = self.__model.fit(X_train, y_label, batch_size= batch_size, 
                                      epochs= epochs, verbose= verbose)
         
         return historial
 
-    def predict(self, state: np.ndarray, verbose: bool = False) -> tuple:
+    def predict(self, state: np.ndarray, verbose: bool = False) -> np.ndarray:
         if self.__model is None:
             print('Model have not been initialized.')
             return
