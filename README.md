@@ -3,9 +3,13 @@
 División de tareas
 
 * Matias:
-    - Graficar entrenamiento del modelo para multiples salidas
-    - Modificar salida de método predict
+    - Generar datos de 10 x 7.
+    - Grafico de entrenamiento en loss y accuracy.
+    - Grafico de comparación de diferentes modelos.
+    - Documentación del código.
 
 * Thomas: 
-    - Estudiar generate_data2
-    - Crear código para que el modelo pueda ser entrenado por si mismo
+    - Probar modelo 10 x 7.
+    - Ideas de multiples salidas del stack origen al destino.
+    - Comparar metricas de modelos.
+    - Explicación del código.
