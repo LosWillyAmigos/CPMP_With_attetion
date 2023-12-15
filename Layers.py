@@ -4,7 +4,7 @@ import tensorflow as tf
 
 class Model_CPMP(Layer):
     def __init__(self, num_layer_attention_add: int = 1,
-                 heads: int = 5, S: int = 5, H: int = 5
+                 heads: int = 5, S: int = 5, H: int = 5,
                  ) -> None:
         super(Model_CPMP, self).__init__()
 
@@ -12,7 +12,8 @@ class Model_CPMP(Layer):
         self.__flatten = Flatten()
         self.__dropout = Dropout(0.5)
         self.__dense_1 = Dense(H * 6, activation= 'sigmoid')
-        self.__dense_5 = Dense(H * 6, activation= 'sigmoid')
+        self.__dense_5 = Dense(H * 9, activation= 'sigmoid')
+        self.__dense_6 = Dense(H * 9, activation= 'sigmoid')
         self.__dense_2 = Dense(S, activation= 'sigmoid')
         self.__dense_3 = Dense(H + 1, activation= 'sigmoid')
         self.__dense_4 = Dense(H + 1)
@@ -21,25 +22,26 @@ class Model_CPMP(Layer):
         self.__add = Add()
 
     @tf.autograph.experimental.do_not_convert
-    def call(self, input: tf.TensorArray) -> None:
+    def call(self, input: tf.TensorArray, training: bool = None) -> None:
         reshape = self.__multihead_atention(input, input)
         add = self.__add([input, reshape])
         normalization = self.__normalization_layer(add)
         dense_3 = self.__dense_3(normalization)
         dense_4 = self.__dense_4(dense_3)
 
-        for i in range(self.__num_layer_attention_add):
+        """for _ in range(self.__num_layer_attention_add):
             reshape = self.__multihead_atention(dense_4, input)
             add = self.__add([input, reshape])
             normalization = self.__normalization_layer(add)
             dense_3 = self.__dense_3(normalization)
-            dense_4 = self.__dense_4(dense_3)
+            dense_4 = self.__dense_4(dense_3)"""
 
         flatten = self.__flatten(dense_4)
         dense_1 = self.__dense_1(flatten)
         dropout_1 = self.__dropout(dense_1)
-        dense_5 = self.__dense_5(dropout_1)
-        dense_2 = self.__dense_2(dense_5)
+        dense_5 = self.__dense_5(dropout_1, training= training)
+        dense_6 = self.__dense_6(dense_5)
+        dense_2 = self.__dense_2(dense_6)
 
         return dense_2
 
