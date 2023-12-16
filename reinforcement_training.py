@@ -1,5 +1,4 @@
 import numpy as np
-import os
 import random
 from statistics import mean
 from copy import deepcopy
@@ -104,7 +103,7 @@ def generate_data2(
 
             for c in range(p * (S * (S - 1)), (p + 1) * (S * (S - 1))):
                 if ccosts[c] != -1 and ccosts[c] == mincost:
-                    A.append(1)
+                    A.append(1) 
                 else:
                     A.append(0)
 
@@ -173,7 +172,7 @@ def reinforcement_training(model: Model, S: int = 5, H: int = 5, MPC: int = 15,
         del data, labels
 
         if verbose: print('')
-        if results_model > 90.0: break
+        if results_model > 98.0: break
 
 def load_cpmp_model(name: str) -> Model:
     custom_objects = {'Model_CPMP': Model_CPMP, 
@@ -190,9 +189,10 @@ if __name__ == '__main__':
     cpmp_ml.generate_data2 = generate_data2
     cpmp_ml.greedy_model = greedy_model
     cpmp_ml.get_ann_state = get_ann_state
+    
+    model = load_cpmp_model('models/model_cpmp_5x5.h5')
 
-    model = load_cpmp_model('models/model_cpmp_5x5_test.h5')
+    reinforcement_training(model= model, S= 5, H= 5, MPC= 15, sample_size= 100000, iter= 2, batch_size= 1000, max_steps= 10) 
 
-    reinforcement_training(model= model, S= 5, H= 5, MPC= 15, sample_size= 30000, iter= 2, batch_size= 55) 
-
-    model.save('models/model_cpmp_5x5.h5')
+    model.save('models/model_cpmp_5x5.keras')
+ 
