@@ -206,7 +206,7 @@ class BeemSearch(OptimizerStrategy):
                 print(f'   prob: {pred_lays[i]}')
 
 
-    def solve(self, lays: np.ndarray[Layout], **kwargs) -> np.ndarray:
+    def solve(self, lays: np.ndarray[Layout], **kwargs) -> tuple:
         start = time.time()
         max_steps = kwargs["max_steps"]
         steps = 0
