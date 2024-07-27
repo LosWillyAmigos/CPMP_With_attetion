@@ -66,7 +66,7 @@ class ModelCPMP(Layer):
         att = input_0
 
         for stack in self.__stack_list:
-            att = stack(att, att, training)
+            att = stack(att, att, training=training)
 
         dn0 = self.__feed(att)
         fl = self.__flatt(dn0)
