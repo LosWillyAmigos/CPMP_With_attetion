@@ -11,6 +11,17 @@ setup(
     url='https://github.com/LosWillyAmigos/CPMP_With_attention',
     packages=find_packages(),
     install_requires=[
+        tensorflow==2.15.0
+        numpy==1.26.3,
+        scikit-learn==1.4.0,
+        pymongo==4.6.1,
+        matplotlib==3.8.2,
+        matplotlib_inline==0.1.6,
+        pydot==1.4.2,
+        graphviz==0.20.3,
+        jupyter==1.0.0,
+        optuna==3.6.1,
+        json==1.6.3
     ],
     classifiers=[
     ],
