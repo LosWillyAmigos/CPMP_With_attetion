@@ -4,11 +4,13 @@ from attentional_cpmp.layers import ConcatenationLayer
 from attentional_cpmp.layers import Reduction
 from attentional_cpmp.layers import FeedForward
 from attentional_cpmp.layers import StackAttention
+
 from cpmp_ml.generators import generate_data_v3
 from cpmp_ml.optimizer import OptimizerStrategy
 from cpmp_ml.optimizer import GreedyModel
 from cpmp_ml.utils.adapters import DataAdapter
 from cpmp_ml.validations import validate_model
+
 from keras.layers import Input
 from keras.layers import TimeDistributed
 from keras.layers import Flatten
@@ -52,8 +54,7 @@ def create_model(heads: int = 5,
 
 def plot_cpmp_model(model: Model = None, name: str = 'model', show_shapes: bool = True) -> None:
     if model is None:
-        print('Model have not been initialized.')
-        return
+        raise ValueError('Model have not been initialized.')
     
     input_shape = model.layers[0].input_shape[0]
     name_img = name + 'x' + str(input_shape[2] - 1) + '.png'
