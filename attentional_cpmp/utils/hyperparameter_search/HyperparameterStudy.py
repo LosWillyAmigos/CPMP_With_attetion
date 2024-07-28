@@ -53,7 +53,7 @@ class HyperparameterStudy:
                                     reduction_factor=reduction_factor)
     self.__study_name = study_name
     self.__direction = direction
-    self.__study = create_study(study_name=self.__direction, 
+    self.__study = create_study(study_name=self.__study_name, 
                                 direction=self.__direction, 
                                 pruner=self.__pruner)
     
