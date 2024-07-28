@@ -182,8 +182,6 @@ class HyperparameterStudy:
 
       pruning_callback = TFKerasPruningCallback(trial, self.__metrics_monitor_callback)
       
-      '''
-      Dont' uses
       early_stopping_callback = EarlyStopping(
           monitor='val_loss',  
           patience=self.__patience,         
@@ -191,7 +189,7 @@ class HyperparameterStudy:
           verbose=self.__verbose,          
           restore_best_weights=self.__restore_best_weights
       )
-      '''
+      
       best_hyp_saver = BestHyperparameterSaver(trial, 
                                                monitor=self.__metrics_monitor_callback, 
                                                filename=self.__dir + "best_hyperparameter.json")
@@ -202,6 +200,7 @@ class HyperparameterStudy:
                           verbose=self.__verbose, 
                           validation_data=(self.__X_val, self.__Y_val),
                           callbacks=[pruning_callback, 
+                                     early_stopping_callback,
                                      best_hyp_saver])
       
       
