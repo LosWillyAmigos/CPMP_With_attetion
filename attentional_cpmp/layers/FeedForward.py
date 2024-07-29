@@ -52,7 +52,7 @@ class FeedForward(Layer):
                 self.__dense_list.append(Dense(list_neurons[index], activation=activation))
                 
                 # Añadir la capa dropout si no es una de las últimas tres capas
-                if index < total_layers - 2:
+                if index < total_layers:
                     if contador == n_dropout:
                         self.__dense_list.append(Dropout(0.5))
                         contador = 1
