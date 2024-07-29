@@ -15,9 +15,12 @@ class ModelCPMP(Layer):
         H (int): The dimension parameter used in stack attention and feedforward layers.
         activation (str): Activation function applied to the inner layers. Default is 'sigmoid'.
         epsilon (float): Small constant for numerical stability in layer normalization. Default is 1e-6.
+        list_neurons_feed (list[int]): Number of neurons for dense layers final.
+        list_neuron_hide (list[int]): Number of neurons for dense layers in stack attention.
+        n_dropout (int): It indicates that every few dense layers there will be a drop.
 
     Methods:
-        __init__(self, heads: int, H: int, activation='sigmoid', epsilon=1e-6)
+        __init__(self, heads: int, H: int, activation='sigmoid', epsilon=1e-6,list_neurons_feed=None, list_neuron_hide=None)
             Initializes the Model_CPMP layer with specified parameters.
 
         call(self, input_0, training=True)
@@ -36,7 +39,8 @@ class ModelCPMP(Layer):
                  activation:str = 'sigmoid', 
                  epsilon:float=1e-6, 
                  list_neurons_feed:list=None,
-                 list_neuron_hide:list=None) -> None:
+                 list_neuron_hide:list=None,
+                 n_dropout: int = 3) -> None:
         super(ModelCPMP, self).__init__()
         if num_stacks is None or H is None:
             raise ValueError("Arguments has no value.")
@@ -48,7 +52,8 @@ class ModelCPMP(Layer):
         self.__stack_list = []
         self.__feed = FeedForward(dim_input=self.__dim, dim_output=1, 
                                   activation='sigmoid', 
-                                  list_neurons=list_neurons_feed)
+                                  list_neurons=list_neurons_feed,
+                                  n_dropout=n_dropout)
         self.__flatt = Flatten()
 
         for _ in range(self.__num_stack_attention):
@@ -56,7 +61,8 @@ class ModelCPMP(Layer):
                                            dim_input=self.__dim,
                                            list_neuron_hide=list_neuron_hide,
                                            epsilon=self.__epsilon,
-                                           act=self.__activation)
+                                           act=self.__activation,
+                                           n_dropout=n_dropout)
             
             self.__stack_list.append(custom_layer)
     
