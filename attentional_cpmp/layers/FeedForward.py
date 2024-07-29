@@ -37,12 +37,14 @@ class FeedForward(Layer):
                  list_neurons: list = None, 
                  n_dropout: int = 3) -> None:
         super(FeedForward, self).__init__()
+        if dim_input is None or dim_output is None:
+            raise ValueError("Input or Output is None")
         
         self.__dense_input = Dense(dim_input, activation=activation)
         
         if list_neurons is not None:
             self.__dense_list = []
-            contador = 0
+            contador = 1
             total_layers = len(list_neurons)
             
             for index in range(total_layers):
@@ -53,7 +55,8 @@ class FeedForward(Layer):
                 if index < total_layers - 2:
                     if contador == n_dropout:
                         self.__dense_list.append(Dropout(0.5))
-                        contador = 0
+                        contador = 1
+                        continue
                     contador += 1
         
         else:
