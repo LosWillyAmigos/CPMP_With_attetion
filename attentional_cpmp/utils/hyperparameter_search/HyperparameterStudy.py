@@ -205,7 +205,7 @@ class HyperparameterStudy:
       
       
       val_loss = history.history['val_loss'][-1]
-
+      clear_session()
       return val_loss
   
   def optimize(self):
