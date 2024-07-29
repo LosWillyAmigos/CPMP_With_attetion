@@ -16,9 +16,11 @@ class StackAttention(Layer):
         dim (int): The key dimension for multi-head attention.
         epsilon (float): Small constant for numerical stability in layer normalization. Default is 1e-6.
         act (str): Activation function applied to the dense layers. Default is 'sigmoid'.
+        list_neuron_hide (list[int]): List of values ​​indicating neurons in dense layers
+        n_dropout (int): It indicates that every few dense layers there will be a drop.
 
     Methods:
-        __init__(self, heads: int, dim: int, epsilon=1e-6, act='sigmoid')
+        __init__(self, heads: int, dim: int, epsilon=1e-6, act='sigmoid', n_dropout=3)
             Initializes the Stack Attention layer with specified parameters.
 
         call(self, inputs_o, inputs_att, training=True)
@@ -35,12 +37,17 @@ class StackAttention(Layer):
                   dim_input: int =  None, 
                   list_neuron_hide: list = None,
                   epsilon=1e-6, 
-                  act = 'sigmoid') -> None:
+                  act:str = 'sigmoid',
+                  n_dropout: int = 3) -> None:
         if heads is None or dim_input is None: 
             raise ValueError("heads or dim has no value.")
         super(StackAttention,self).__init__()
         self.__multihead = MultiHeadAttention(num_heads=heads,key_dim=dim_input)
-        self.__feed = FeedForward(dim_input=dim_input, dim_output=dim_input, activation=act, list_neurons=list_neuron_hide)
+        self.__feed = FeedForward(dim_input=dim_input, 
+                                  dim_output=dim_input, 
+                                  activation=act, 
+                                  list_neurons=list_neuron_hide,
+                                  n_dropout=n_dropout)
         self.__add = Add()
         self.__layer_n = LayerNormalization(epsilon=epsilon)
     
