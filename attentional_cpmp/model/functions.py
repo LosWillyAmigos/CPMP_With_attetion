@@ -27,14 +27,16 @@ def create_model(heads: int = 5,
                 epsilon:float=1e-6,
                 num_stacks: int = 1,
                 list_neuron_feed: list = [30, 45, 30, 45, 30],
-                list_neuron_hide: list = None) -> Model:
+                list_neuron_hide: list = None,
+                n_dropout: int = 3) -> Model:
     input_layer = Input(shape=(None,H+1))
     layer_attention_so = ModelCPMP(H=H,heads=heads,
                                     activation='sigmoid',
                                     epsilon=epsilon, 
                                     num_stacks=num_stacks,
                                     list_neurons_feed=list_neuron_feed,
-                                    list_neuron_hide=list_neuron_hide)(input_layer)
+                                    list_neuron_hide=list_neuron_hide,
+                                    n_dropout=n_dropout)(input_layer)
     expand = ExpandOutput()(layer_attention_so)
     concatenation = ConcatenationLayer()(input_layer)
     distributed = TimeDistributed(ModelCPMP(H=H+1,heads=heads,
@@ -42,7 +44,8 @@ def create_model(heads: int = 5,
                                              epsilon=epsilon, 
                                              num_stacks=num_stacks,
                                              list_neurons_feed=list_neuron_feed, 
-                                             list_neuron_hide=list_neuron_hide))(concatenation)
+                                             list_neuron_hide=list_neuron_hide,
+                                             n_dropout=n_dropout))(concatenation)
     unificate = Flatten()(distributed)
     mult = Multiply()([unificate,expand])
     red = Reduction()(mult)
