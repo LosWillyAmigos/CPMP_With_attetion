@@ -7,7 +7,7 @@ README = (HERE / "README.md").read_text(encoding="utf-8")
 VERSION = "2.5.0"
 
 setup(
-    name="CPMP_ML",
+    name="Attentional_CPMP",
     description="Library to resolve Container Pre Marshalling Problem (CPMP) with attentional mechanism",
     long_description=README,
     long_description_content_type="text/markdown",
