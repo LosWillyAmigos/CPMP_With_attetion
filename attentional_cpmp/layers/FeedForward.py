@@ -1,5 +1,6 @@
 from keras.layers import Layer
 from keras.layers import Dense
+from keras.layers import Dropout
 import tensorflow as tf
 
 class FeedForward(Layer):
@@ -27,22 +28,26 @@ class FeedForward(Layer):
         # Perform a forward pass
         output = feedforward_layer(inputs)
     """
-    def __init__(self, dim_input:int = None, dim_output:int = None, activation: str = 'sigmoid', list_neurons: list = None) -> None:
+    def __init__(self, dim_input: int, activation: str = 'sigmoid', dim_output: int = 1) -> None:
         # Verificar si los parámetros requeridos tienen valores
+        if dim_input is None:
+            raise ValueError("dim_input has no value.")
         super(FeedForward,self).__init__()
-        self.__dense_input = Dense(dim_input, activation=activation)
-        if list_neurons is not None:
-            self.__dense_list = [Dense(neurons, activation=activation) for neurons in list_neurons]
-        else:
-            self.__dense_list = []
-        self.__dense_output = Dense(dim_output, activation=activation)
-        
+        self.__d1 = Dense(dim_input, activation=activation)
+        self.__d2 = Dense(dim_input * 4, activation=activation)
+        self.__dp1 = Dropout(0.5)
+        self.__d3 = Dense(dim_input * 3, activation=activation)
+        self.__dp2 = Dropout(0.5)
+        self.__d4 = Dense(dim_input * 2, activation=activation)
+        self.__d5 = Dense(dim_output, activation=activation)
 
     def call(self, inputs: tf.TensorArray):
-        out = self.__dense_input(inputs)
+        o1 = self.__d1(inputs)
+        o2 = self.__d2(o1)
+        d1 = self.__dp1(o2)
+        o3 = self.__d3(d1)
+        o4 = self.__d4(o3)
+        d2 = self.__dp2(o4)
+        o5 = self.__d5(d2)
 
-        for layer in self.__dense_list:
-            out = layer(out)
-
-        out = self.__dense_output(out)
-        return out
+        return o5

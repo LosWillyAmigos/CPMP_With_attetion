@@ -1,7 +1,7 @@
-from attentional_cpmp.layers.FeedForward import FeedForward
 from keras.layers import Layer
 from keras.layers import MultiHeadAttention
 from keras.layers import Add
+from keras.layers import Dense
 from keras.layers import LayerNormalization
 import tensorflow as tf
 
@@ -32,22 +32,23 @@ class StackAttention(Layer):
         output = stack_attention_layer(inputs_o, inputs_att, training=True)
     """
     def __init__(self, heads: int,
-                  dim_input: int =  None, 
-                  list_neuron_hide: list = None,
+                  dim_input: int =  None,
                   epsilon=1e-6, 
                   act = 'sigmoid') -> None:
         if heads is None or dim_input is None: 
             raise ValueError("heads or dim has no value.")
         super(StackAttention,self).__init__()
         self.__multihead = MultiHeadAttention(num_heads=heads,key_dim=dim_input)
-        self.__feed = FeedForward(dim_input=dim_input, dim_output=dim_input, activation=act, list_neurons=list_neuron_hide)
+        self.__feed_1 = Dense(dim_input, activation= act)
+        self.__feed_2 = Dense(dim_input, activation= 'linear')
         self.__add = Add()
         self.__layer_n = LayerNormalization(epsilon=epsilon)
     
     def call(self, inputs_o: tf.TensorArray, inputs_att: tf.TensorArray, training=True):
         att = self.__multihead(inputs_att,inputs_att, training=training)
-        feed = self.__feed(att)
-        add = self.__add([inputs_o,feed])
+        feed_1 = self.__feed_1(att)
+        feed_2 = self.__feed_2(feed_1)
+        add = self.__add([inputs_o,feed_2])
         output = self.__layer_n(add)
 
         return output

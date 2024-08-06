@@ -34,9 +34,7 @@ class ModelCPMP(Layer):
                  H: int = None, 
                  num_stacks: int = None,
                  activation:str = 'sigmoid', 
-                 epsilon:float=1e-6, 
-                 list_neurons_feed:list=None,
-                 list_neuron_hide:list=None) -> None:
+                 epsilon:float=1e-6) -> None:
         super(ModelCPMP, self).__init__()
         if num_stacks is None or H is None:
             raise ValueError("Arguments has no value.")
@@ -47,14 +45,12 @@ class ModelCPMP(Layer):
         self.__epsilon = epsilon
         self.__stack_list = []
         self.__feed = FeedForward(dim_input=self.__dim, dim_output=1, 
-                                  activation='sigmoid', 
-                                  list_neurons=list_neurons_feed)
+                                  activation= 'sigmoid')
         self.__flatt = Flatten()
 
         for _ in range(self.__num_stack_attention):
             custom_layer = StackAttention(heads=self.__heads,
                                            dim_input=self.__dim,
-                                           list_neuron_hide=list_neuron_hide,
                                            epsilon=self.__epsilon,
                                            act=self.__activation)
             
