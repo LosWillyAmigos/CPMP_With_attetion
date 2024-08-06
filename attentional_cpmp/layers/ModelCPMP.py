@@ -40,7 +40,8 @@ class ModelCPMP(Layer):
                  epsilon:float=1e-6, 
                  list_neurons_feed:list=None,
                  list_neuron_hide:list=None,
-                 n_dropout: int = 3) -> None:
+                 n_dropout: int = 3,
+                 dropout: float = 0.5) -> None:
         super(ModelCPMP, self).__init__()
         if num_stacks is None or H is None:
             raise ValueError("Arguments has no value.")
@@ -53,7 +54,8 @@ class ModelCPMP(Layer):
         self.__feed = FeedForward(dim_input=self.__dim, dim_output=1, 
                                   activation='sigmoid', 
                                   list_neurons=list_neurons_feed,
-                                  n_dropout=n_dropout)
+                                  n_dropout=n_dropout,
+                                  dropout=dropout)
         self.__flatt = Flatten()
 
         for _ in range(self.__num_stack_attention):
@@ -62,7 +64,8 @@ class ModelCPMP(Layer):
                                            list_neuron_hide=list_neuron_hide,
                                            epsilon=self.__epsilon,
                                            act=self.__activation,
-                                           n_dropout=n_dropout)
+                                           n_dropout=n_dropout,
+                                           dropout=dropout)
             
             self.__stack_list.append(custom_layer)
     

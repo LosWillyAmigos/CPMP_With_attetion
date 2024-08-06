@@ -38,7 +38,8 @@ class StackAttention(Layer):
                   list_neuron_hide: list = None,
                   epsilon=1e-6, 
                   act:str = 'sigmoid',
-                  n_dropout: int = 3) -> None:
+                  n_dropout: int = 3,
+                  dropout: float = 0.5) -> None:
         if heads is None or dim_input is None: 
             raise ValueError("heads or dim has no value.")
         super(StackAttention,self).__init__()
@@ -47,7 +48,8 @@ class StackAttention(Layer):
                                   dim_output=dim_input, 
                                   activation=act, 
                                   list_neurons=list_neuron_hide,
-                                  n_dropout=n_dropout)
+                                  n_dropout=n_dropout,
+                                  dropout=dropout)
         self.__add = Add()
         self.__layer_n = LayerNormalization(epsilon=epsilon)
     
