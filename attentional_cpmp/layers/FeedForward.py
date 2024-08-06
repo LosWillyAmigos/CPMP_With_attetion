@@ -1,5 +1,6 @@
 from keras.layers import Layer
 from keras.layers import Dense
+from keras.layers import Dropout
 import tensorflow as tf
 
 class FeedForward(Layer):
@@ -31,18 +32,31 @@ class FeedForward(Layer):
         # Verificar si los parámetros requeridos tienen valores
         super(FeedForward,self).__init__()
         self.__dense_input = Dense(dim_input, activation=activation)
+
         if list_neurons is not None:
+            list_neurons_size = len(list_neurons)
+
+            self.__dropout_list = [Dropout(0.5) for i in range(list_neurons_size) if i % 2 == 0]
             self.__dense_list = [Dense(neurons, activation=activation) for neurons in list_neurons]
         else:
+            self.__dropout_list = []
             self.__dense_list = []
+
         self.__dense_output = Dense(dim_output, activation=activation)
         
 
     def call(self, inputs: tf.TensorArray):
         out = self.__dense_input(inputs)
 
+        i = 0
+        j = 0
         for layer in self.__dense_list:
+            if i % 2 == 0: 
+                out = self.__dropout_list[j](out)
+                j += 1
+
             out = layer(out)
+            i += 1
 
         out = self.__dense_output(out)
         return out
