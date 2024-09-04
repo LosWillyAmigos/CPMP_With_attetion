@@ -32,11 +32,11 @@ def load_data_mongo(collection):
     """
     data = dict()
     for states in collection.find():
-        if str(len(states['State'])) not in data:
-            data.update({str(len(states['State'])): {'States': [states['State']], 'Labels': [states['Labels']]}})
+        if str(len(states['States'])) not in data:
+            data.update({str(len(states['States'])): {'States': [states['States']], 'Labels': [states['Labels']]}})
         else:
-            data[str(len(states['State']))]['States'].append(states['State'])
-            data[str(len(states['State']))]['Labels'].append(states['Labels'])
+            data[str(len(states['States']))]['States'].append(states['States'])
+            data[str(len(states['States']))]['Labels'].append(states['Labels'])
 
     return data
 
