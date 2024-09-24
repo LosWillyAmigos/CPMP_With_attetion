@@ -41,14 +41,18 @@ class StackAttention(Layer):
         self.__multihead = MultiHeadAttention(num_heads=heads,key_dim=dim_input)
         self.__feed_1 = Dense(dim_input, activation= act)
         self.__feed_2 = Dense(dim_input, activation= 'linear')
-        self.__add = Add()
-        self.__layer_n = LayerNormalization(epsilon=epsilon)
+        self.__add_1 = Add()
+        self.__add_2 = Add()
+        self.__layer_n_1 = LayerNormalization(epsilon= epsilon)
+        self.__layer_n_2 = LayerNormalization(epsilon= epsilon)
     
     def call(self, inputs_o: tf.TensorArray, inputs_att: tf.TensorArray, training=True):
-        att = self.__multihead(inputs_att,inputs_att, training=training)
-        feed_1 = self.__feed_1(att)
+        att = self.__multihead(inputs_att, inputs_att, inputs_att, training=training)
+        add_1 = self.__add_1([inputs_att, att])
+        layer_n = self.__layer_n_1(add_1)
+        feed_1 = self.__feed_1(layer_n)
         feed_2 = self.__feed_2(feed_1)
-        add = self.__add([inputs_o,feed_2])
-        output = self.__layer_n(add)
+        add_2= self.__add_2([layer_n,feed_2])
+        output = self.__layer_n_2(add_2)
 
         return output
