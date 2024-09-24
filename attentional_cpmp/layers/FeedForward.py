@@ -33,12 +33,12 @@ class FeedForward(Layer):
         if dim_input is None:
             raise ValueError("dim_input has no value.")
         super(FeedForward,self).__init__()
-        self.__d1 = Dense(dim_input, activation=activation)
-        self.__d2 = Dense(dim_input * 4, activation=activation)
-        self.__dp1 = Dropout(0.5)
-        self.__d3 = Dense(dim_input * 3, activation=activation)
-        self.__dp2 = Dropout(0.5)
-        self.__d4 = Dense(dim_input * 2, activation=activation)
+        self.__d1 = Dense(dim_input, activation='linear')
+        self.__d2 = Dense(dim_input * 4, activation='sigmoid')
+        self.__dp1 = Dropout(0.2)
+        self.__d3 = Dense(dim_input * 3, activation='sigmoid')
+        self.__dp2 = Dropout(0.2)
+        self.__d4 = Dense(dim_input * 2, activation='sigmoid')
         self.__d5 = Dense(dim_output, activation=activation)
 
     def call(self, inputs: tf.TensorArray):
