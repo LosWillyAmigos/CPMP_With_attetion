@@ -56,7 +56,7 @@ class ModelCPMP(Layer):
             
             self.__stack_list.append(custom_layer)
     
-    @tf.autograph.experimental.do_not_convert
+    @tf.function
     def call(self, input_0: tf.TensorArray, training=True) -> None:
         
         att = input_0
