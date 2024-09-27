@@ -40,6 +40,15 @@ def load_data_mongo(collection):
 
     return data
 
+def load_data_mongo_2(collection):
+    data, labels = [], []
+
+    for states in collection.find():
+        data.append(np.array(states['States']))
+        labels.append(np.array(states['Labels']))
+
+    return data, labels
+
 def save_data_mongo(collection, data: list[np.ndarray], labels: list[np.ndarray]):
     """
     The purpose of this function is to store all states 
