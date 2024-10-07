@@ -57,11 +57,11 @@ def load_data_from_json(file_path):
 
     # Process the data
     for states in json_data:
-        state_len = str(len(states['State']))
+        state_len = str(len(states['States']))
         if state_len not in data:
-            data[state_len] = {'States': [states['State']], 'Labels': [states['Labels']]}
+            data[state_len] = {'States': [states['States']], 'Labels': [states['Labels']]}
         else:
-            data[state_len]['States'].append(states['State'])
+            data[state_len]['States'].append(states['States'])
             data[state_len]['Labels'].append(states['Labels'])
 
     return data
