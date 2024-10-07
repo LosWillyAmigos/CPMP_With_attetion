@@ -38,3 +38,30 @@ def load_data_json(name_file:str) -> tuple:
 
 
     return np.stack(states), np.stack(labels)
+
+def load_data_from_json(file_path):
+    """
+    The purpose of this function is to load data from a JSON file.
+
+    Input:
+        file_path: The path to the JSON file containing the data.
+    
+    Returns:
+        data: A dictionary structured as described in the original function.
+    """
+    data = dict()
+
+    # Load JSON data from the specified file
+    with open(file_path, 'r') as file:
+        json_data = json.load(file)
+
+    # Process the data
+    for states in json_data:
+        state_len = str(len(states['State']))
+        if state_len not in data:
+            data[state_len] = {'States': [states['State']], 'Labels': [states['Labels']]}
+        else:
+            data[state_len]['States'].append(states['State'])
+            data[state_len]['Labels'].append(states['Labels'])
+
+    return data

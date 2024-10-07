@@ -33,28 +33,40 @@ class StackAttention(Layer):
         # Perform a forward pass
         output = stack_attention_layer(inputs_o, inputs_att, training=True)
     """
-    def __init__(self, heads: int,
-                  dim_input: int =  None, 
-                  list_neuron_hide: list = None,
-                  epsilon=1e-6, 
-                  act:str = 'sigmoid',
-                  n_dropout: int = 3,
-                  dropout: float = 0.5) -> None:
-        if heads is None or dim_input is None: 
+    def __init__(self, heads: int = None,
+                  dim_input: int =  None,
+                  dim_output: int = None,
+                  epsilon=1e-6,
+                  list_neurons:list[int] = None,
+                  activation: str = 'linear',
+                  use_bias: bool=True,
+                  kernel_initializer: str = "glorot_uniform",
+                  bias_initializer: str="zeros",
+                  k_l2_l1:float = 0.01,
+                  b_l2_l1:float = 0.01,
+                  activity_regularizer=None,
+                  kernel_constraint=None,
+                  bias_constraint=None,
+                  rate: float = 0.0,
+                  noise_shape: Any | None = None,
+                  seed: Any | None = None,
+                  n_dropout: int = 1,
+                  **kwargs) -> None:
+        if heads is None or dim_input is None or dim_output is None: 
             raise ValueError("heads or dim has no value.")
-        super(StackAttention,self).__init__()
+        super(StackAttention, self).__init__()
         self.__multihead = MultiHeadAttention(num_heads=heads,key_dim=dim_input)
-        self.__feed = FeedForward(dim_input=dim_input, 
-                                  dim_output=dim_input, 
-                                  activation=act, 
-                                  list_neurons=list_neuron_hide,
-                                  n_dropout=n_dropout,
-                                  dropout=dropout)
-        self.__add = Add()
-        self.__layer_n = LayerNormalization(epsilon=epsilon)
-    
-    def call(self, inputs_o: tf.TensorArray, inputs_att: tf.TensorArray, training=True):
-        att = self.__multihead(inputs_att,inputs_att, training=training)
+        self.__feed = FeedForward(dim_input=dim_input,
+                                  dim_output=dim_output,
+                                  list_neurons=list_neurons)
+        self.__add_1 = Add()
+        self.__add_2 = Add()
+        self.__layer_n_1 = LayerNormalization(epsilon=epsilon)
+        self.__layer_n_2 = LayerNormalization(epsilon=epsilon)
+        
+    @tf.autograph.experimental.do_not_convert
+    def call(self, inputs_o: tf.TensorArray, inputs_att: tf.TensorArray, training = True, **kwargs):
+        att = self.__multihead(inputs_att, inputs_att, training=training)
         feed = self.__feed(att)
         add = self.__add([inputs_o,feed])
         output = self.__layer_n(add)

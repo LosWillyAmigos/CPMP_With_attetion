@@ -1,6 +1,8 @@
 from keras.layers import Layer
 from keras.layers import Dense
 from keras.layers import Dropout
+from keras import Sequential
+from keras.regularizers import l1_l2
 import tensorflow as tf
 
 class FeedForward(Layer):
@@ -10,63 +12,98 @@ class FeedForward(Layer):
     This class implements a simple feedforward neural network layer using TensorFlow's Keras API. The network consists of multiple dense layers with dropout regularization.
 
     Attributes:
-        dim (int): The input dimension of the network. Default value is 5 for five column models.
-        activation (str): The activation function applied to each dense layer. Default is 'sigmoid'.
-        dim_output (int): The output dimension of the network. Default is 5.
-        list_neurons (list[int]): Number of neurons for dense layers.
-        n_dropout (int): It indicates that every few dense layers there will be a drop.
-
+        
     Methods:
-        __init__(self, dim=5, activation='sigmoid', dim_output=5)
-            Initializes the FeedForward layer with specified input dimension, activation function, and output dimension.
+        __init__()
 
-        call(self, inputs)
+        call(self, inputs, training=True, **kwargs)
             Defines the forward pass of the network.
 
     Usage:
-        # Create a FeedForward layer
-        feedforward_layer = FeedForward(dim=10, activation='relu', dim_output=3)
-
-        # Perform a forward pass
-        output = feedforward_layer(inputs)
+    
     """
     def __init__(self, 
                  dim_input: int = None, 
                  dim_output: int = None, 
-                 activation: str = 'sigmoid', 
-                 list_neurons: list = None, 
-                 n_dropout: int = 3,
-                 dropout: float = 0.5) -> None:
+                 activation: str = 'linear',
+                 list_neurons: list[int] = None,
+                 use_bias: bool=True,
+                 kernel_initializer: str = "glorot_uniform",
+                 bias_initializer: str="zeros",
+                 k_l2_l1:float = 0.01,
+                 b_l2_l1:float = 0.01,
+                 activity_regularizer=None,
+                 kernel_constraint=None,
+                 bias_constraint=None,
+                 rate: float = 0.0,
+                 noise_shape: Any | None = None,
+                 seed: Any | None = None,
+                 n_dropout: int = 1,
+                 **kwargs) -> None:
         super(FeedForward, self).__init__()
         if dim_input is None or dim_output is None:
             raise ValueError("Input or Output is None")
         
-        self.__dense_input = Dense(dim_input, activation=activation)
+        self.__feed = Sequential()
+        
+        self.__feed.add(Dense(units=dim_input, 
+                              activation=activation, 
+                              input_shape=((None, dim_input)),
+                              use_bias=use_bias,
+                              kernel_initializer=kernel_initializer,
+                              bias_initializer=bias_initializer,
+                              kernel_regularizer=l1_l2(l1=k_l2_l1, l2=k_l2_l1),
+                              bias_regularizer=l1_l2(l1=b_l2_l1, l2=b_l2_l1),
+                              activity_regularizer=activity_regularizer,
+                              kernel_constraint=kernel_constraint,
+                              bias_constraint=bias_constraint,
+                              **kwargs))
         
         if list_neurons is not None:
-            self.__dense_list = []
-            contador = 1
-            total_layers = len(list_neurons)
+            for i, num_neuron in enumerate(list_neurons[1:], start=0):
+                if i % 2 == 0:
+                    self.__feed.add(Dense(units=num_neuron, 
+                                      activation=activation,
+                                      use_bias=use_bias,
+                                      kernel_initializer=kernel_initializer,
+                                      bias_initializer=bias_initializer,
+                                      kernel_regularizer=l1_l2(l1=k_l2_l1, l2=k_l2_l1),
+                                      bias_regularizer=l1_l2(l1=b_l2_l1, l2=b_l2_l1),
+                                      activity_regularizer=activity_regularizer,
+                                      kernel_constraint=kernel_constraint,
+                                      bias_constraint=bias_constraint,
+                                      **kwargs))
+                else:
+                    self.__feed.add(Dense(units=num_neuron, 
+                                      activation="linear",
+                                      use_bias=use_bias,
+                                      kernel_initializer=kernel_initializer,
+                                      bias_initializer=bias_initializer,
+                                      kernel_regularizer=l1_l2(l1=k_l2_l1, l2=k_l2_l1),
+                                      bias_regularizer=l1_l2(l1=b_l2_l1, l2=b_l2_l1),
+                                      activity_regularizer=activity_regularizer,
+                                      kernel_constraint=kernel_constraint,
+                                      bias_constraint=bias_constraint,
+                                      **kwargs))
 
-            for index in range(total_layers):
-                self.__dense_list.append(Dense(list_neurons[index], activation=activation))
-                
-                if n_dropout > 0 and index < total_layers - 1:
-                    if contador == n_dropout:
-                        self.__dense_list.append(Dropout(rate=dropout)) 
-                        contador = 1
-                    else:
-                        contador += 1
-        else:
-            self.__dense_list = []
+                if ((i+1) % n_dropout == 0) and rate > 0:
+                    self.__feed.add(Dropout(rate=rate, 
+                                            noise_shape=noise_shape, 
+                                            seed=seed,
+                                            **kwargs))
         
-        self.__dense_output = Dense(dim_output, activation=activation)
-
-    def call(self, inputs: tf.TensorArray):
-        out = self.__dense_input(inputs)
-
-        for layer in self.__dense_list:
-            out = layer(out)
-
-        out = self.__dense_output(out)
-        return out
+        self.__feed.add(Dense(units=dim_output, 
+                              activation=activation,
+                              use_bias=use_bias,
+                              kernel_initializer=kernel_initializer,
+                              bias_initializer=bias_initializer,
+                              kernel_regularizer=l1_l2(l1=k_l2_l1, l2=k_l2_l1),
+                              bias_regularizer=l1_l2(l1=b_l2_l1, l2=b_l2_l1),
+                              activity_regularizer=activity_regularizer,
+                              kernel_constraint=kernel_constraint,
+                              bias_constraint=bias_constraint,
+                              **kwargs))
+        
+    @tf.autograph.experimental.do_not_convert
+    def call(self, inputs: tf.TensorArray, training=True, **kwargs):
+        return self.__feed(inputs, training=training, **kwargs)

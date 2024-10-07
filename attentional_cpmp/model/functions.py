@@ -4,6 +4,7 @@ from attentional_cpmp.layers import ConcatenationLayer
 from attentional_cpmp.layers import Reduction
 from attentional_cpmp.layers import FeedForward
 from attentional_cpmp.layers import StackAttention
+from attentional_cpmp.layers import DenseLayer
 
 from cpmp_ml.generators import generate_data_v3
 from cpmp_ml.optimizer import OptimizerStrategy
@@ -27,8 +28,6 @@ def create_model(heads: int = 5,
                 epsilon:float=1e-6,
                 num_stacks: int = 1,
                 list_neuron_feed: list = [30, 45, 30, 45, 30],
-                list_neuron_hide: list = None,
-                n_dropout: int = 3,
                 dropout: float = 0.5) -> Model:
     input_layer = Input(shape=(None,H+1))
     layer_attention_so = ModelCPMP(H=H,heads=heads,
@@ -36,8 +35,6 @@ def create_model(heads: int = 5,
                                     epsilon=epsilon, 
                                     num_stacks=num_stacks,
                                     list_neurons_feed=list_neuron_feed,
-                                    list_neuron_hide=list_neuron_hide,
-                                    n_dropout=n_dropout,
                                     dropout=dropout)(input_layer)
     expand = ExpandOutput()(layer_attention_so)
     concatenation = ConcatenationLayer()(input_layer)
@@ -46,8 +43,6 @@ def create_model(heads: int = 5,
                                              epsilon=epsilon, 
                                              num_stacks=num_stacks,
                                              list_neurons_feed=list_neuron_feed, 
-                                             list_neuron_hide=list_neuron_hide,
-                                             n_dropout=n_dropout,
                                              dropout=dropout))(concatenation)
     unificate = Flatten()(distributed)
     mult = Multiply()([unificate,expand])
@@ -79,7 +74,8 @@ def load_cpmp_model(name: str) -> Model:
              'ConcatenationLayer': ConcatenationLayer,
              'Reduction': Reduction,
              'FeedForward' : FeedForward,
-             'StackAttention' : StackAttention}
+             'StackAttention' : StackAttention,
+             'DenseLayer': DenseLayer}
         model = tf.keras.models.load_model(name,custom_objects=c_o)
         
         return model

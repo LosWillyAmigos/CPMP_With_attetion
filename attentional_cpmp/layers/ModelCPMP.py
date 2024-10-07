@@ -1,7 +1,9 @@
 from keras.layers import Layer
-from keras.layers import Flatten
+from keras.layers import Flatten, Input, Dense
+from keras.models import Model
 from attentional_cpmp.layers import FeedForward
 from attentional_cpmp.layers import StackAttention
+from attentional_cpmp.layers import DenseLayer
 import tensorflow as tf
 
 class ModelCPMP(Layer):
@@ -39,8 +41,6 @@ class ModelCPMP(Layer):
                  activation:str = 'sigmoid', 
                  epsilon:float=1e-6, 
                  list_neurons_feed:list=None,
-                 list_neuron_hide:list=None,
-                 n_dropout: int = 3,
                  dropout: float = 0.5) -> None:
         super(ModelCPMP, self).__init__()
         if num_stacks is None or H is None:
@@ -50,33 +50,29 @@ class ModelCPMP(Layer):
         self.__num_stack_attention = num_stacks
         self.__activation = activation
         self.__epsilon = epsilon
-        self.__stack_list = []
-        self.__feed = FeedForward(dim_input=self.__dim, dim_output=1, 
-                                  activation='sigmoid', 
-                                  list_neurons=list_neurons_feed,
-                                  n_dropout=n_dropout,
-                                  dropout=dropout)
-        self.__flatt = Flatten()
+        self.__dropout = dropout
+        self.__list_neurons = list_neurons_feed
+
+
+        self.__create_layer()
+    
+    def __create_layer(self):
+        inp = Input(shape=(None, self.__dim))
+        attention = inp
 
         for _ in range(self.__num_stack_attention):
-            custom_layer = StackAttention(heads=self.__heads,
+            attention = StackAttention(heads=self.__heads,
                                            dim_input=self.__dim,
-                                           list_neuron_hide=list_neuron_hide,
                                            epsilon=self.__epsilon,
-                                           act=self.__activation,
-                                           n_dropout=n_dropout,
-                                           dropout=dropout)
-            
-            self.__stack_list.append(custom_layer)
-    
-    @tf.autograph.experimental.do_not_convert
-    def call(self, input_0: tf.TensorArray, training=True) -> None:
+                                           act=self.__activation)(attention, attention)
+        feed = FeedForward(dim_input=self.__dim, dim_output=1, 
+                                  activation='sigmoid', 
+                                  list_neurons=self.__list_neurons,
+                                  dropout=self.__dropout)(attention)
+        flttn = Flatten()(feed)
         
-        att = input_0
+        self.__model_stacks = Model(inputs=inp, outputs=flttn)
 
-        for stack in self.__stack_list:
-            att = stack(att, att, training=training)
-
-        dn0 = self.__feed(att)
-        fl = self.__flatt(dn0)
-        return fl
+    @tf.autograph.experimental.do_not_convert
+    def call(self, input_0: tf.TensorArray, training = True):
+        return self.__model_stacks(input_0, training)

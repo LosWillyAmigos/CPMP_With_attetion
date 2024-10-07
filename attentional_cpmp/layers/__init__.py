@@ -5,5 +5,6 @@ from attentional_cpmp.layers.ExpandOutput import ExpandOutput
 from attentional_cpmp.layers.FeedForward import FeedForward
 from attentional_cpmp.layers.ModelCPMP import ModelCPMP
 from attentional_cpmp.layers.Reduction import Reduction
+from attentional_cpmp.layers.DenseLayer import DenseLayer
 
-__all__ = ['StackAttention', 'ConcatenationLayer', 'ExpandOutput', 'FeedForward', 'ModelCPMP', 'Reduction']
+__all__ = ['StackAttention', 'ConcatenationLayer', 'ExpandOutput', 'FeedForward', 'ModelCPMP', 'Reduction', 'DenseLayer']
