@@ -35,8 +35,7 @@ class FeedForward(Layer):
                  list_neurons: list[int] = None,
                  activation: str = 'sigmoid',
                  rate: float = 0.00001,
-                 n_dropout: int = 1,
-                 **kwargs) -> None:
+                 n_dropout: int = 1) -> None:
         # Verificar si los parámetros requeridos tienen valores
         if dim_input is None:
             raise ValueError("dim_input has no value.")
@@ -62,6 +61,7 @@ class FeedForward(Layer):
         self.__feed.add(Dense(units=dim_output, 
                               activation=activation))
 
+    @tf.function
     def call(self, inputs: tf.TensorArray, training=True , **kwargs):
         out = self.__feed(inputs, training=training, **kwargs)
         return out

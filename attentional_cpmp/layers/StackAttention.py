@@ -45,8 +45,7 @@ class StackAttention(Layer):
                   activation_feed_hide: str = 'sigmoid',
                   dropout: float = 0,
                   rate: float = 0.5,
-                  n_dropout: int = 1,
-                  **kwargs) -> None:
+                  n_dropout: int = 1) -> None:
         if num_heads is None or dim_input is None: 
             raise ValueError("num_heads or dim has no value.")
         if key_dim is None: 
@@ -63,13 +62,13 @@ class StackAttention(Layer):
                                   list_neurons=list_neurons,
                                   activation=activation_feed_hide,
                                   rate=rate,
-                                  n_dropout=n_dropout,
-                                  **kwargs)
+                                  n_dropout=n_dropout)
         self.__add_1 = Add()
         self.__add_2 = Add()
         self.__layer_n_1 = LayerNormalization(epsilon=epsilon)
         self.__layer_n_2 = LayerNormalization(epsilon=epsilon)
     
+    @tf.function
     def call(self, inputs_o: tf.TensorArray, inputs_att: tf.TensorArray, training=True):
         att = self.__multihead(inputs_o, inputs_att, inputs_att, training=training)
         add_1 = self.__add_1([inputs_att, att])

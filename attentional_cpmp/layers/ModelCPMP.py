@@ -47,8 +47,7 @@ class ModelCPMP(Layer):
                  activation_hide: str = 'sigmoid', 
                  activation_feed: str = 'sigmoid',
                  n_dropout_hide: int = 1,
-                 n_dropout_feed: int = 1,
-                 **kwargs) -> None:
+                 n_dropout_feed: int = 1) -> None:
         super(ModelCPMP, self).__init__()
         if num_stacks is None or dim is None:
             raise ValueError("Arguments has no value.")
@@ -83,16 +82,14 @@ class ModelCPMP(Layer):
                                        activation_feed_hide=self.__activation_hide,
                                        n_dropout=self.__n_dropout_hide,
                                        dropout=self.__dropout,
-                                       rate=self.__rate,
-                                       **kwargs)(attention, attention)
+                                       rate=self.__rate)(attention, attention)
 
         feed = FeedForward(dim_input=self.__dim,
                            dim_output=1,
                            list_neurons=self.__list_neurons_feed,
                            activation=self.__activation_feed,
                            rate=self.__rate,
-                           n_dropout=self.__n_dropout_feed,
-                           **kwargs)(attention)
+                           n_dropout=self.__n_dropout_feed)(attention)
         flttn = Flatten()(feed)
 
         self.__model_stacks = Model(inputs=inp, outputs=flttn)
