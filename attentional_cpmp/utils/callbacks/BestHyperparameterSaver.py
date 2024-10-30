@@ -52,14 +52,15 @@ class BestHyperparameterSaver(Callback):
         new_dictionary['num_heads'] = dict_copy_hyp['num_heads']
         new_dictionary['epsilon'] = dict_copy_hyp['epsilon']
         new_dictionary['key_dim'] = dict_copy_hyp['key_dim']
+        new_dictionary['value_dim'] = dict_copy_hyp['value_dim']
         new_dictionary['num_neurons_layers_feed'] = dict_copy_hyp['num_neurons_layers_feed']
         new_dictionary['num_neurons_layers_hide'] = dict_copy_hyp['num_neurons_layers_hide']
 
         neurons_feed = [dict_copy_hyp[f'list_neurons_feed_{i}'] for i in range(new_dictionary['num_neurons_layers_feed'])]
         neurons_hide = [dict_copy_hyp[f'list_neurons_hide_{i}'] for i in range(new_dictionary['num_neurons_layers_hide'])]
 
-        new_dictionary['list_neurons_feed'] = neurons_feed
-        new_dictionary['list_neurons_hide'] = neurons_hide
+        new_dictionary['list_neuron_feed'] = neurons_feed
+        new_dictionary['list_neuron_hide'] = neurons_hide
 
         return new_dictionary
 
