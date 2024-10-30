@@ -41,6 +41,9 @@ class HyperparameterStudy:
       num_stacks = trial.suggest_int('num_stacks', 1, self.__max_num_stacks)
       num_heads = trial.suggest_int('num_heads', 1, self.__max_num_heads)
       key_dim = trial.suggest_int('key_dim', 1, self.__max_key_dim)
+      value_dim = trial.suggest_int('value_dim', 0, self.__max_value_dim)
+      if value_dim == 0:
+          value_dim = None
       epsilon = trial.suggest_float('epsilon', 1e-9, self.__max_epsilon, log=True)
       num_neurons_layers_feed = trial.suggest_int('num_neurons_layers_feed', 0, self.__max_num_neurons_layers_feed)
       num_neurons_layers_hide = trial.suggest_int('num_neurons_layers_hide', 0, self.__max_num_neurons_layers_hide)
@@ -49,7 +52,7 @@ class HyperparameterStudy:
 
       model = create_model(H=self.__H,
                            key_dim=key_dim,
-                           value_dim=self.__value_dim,
+                           value_dim=value_dim,
                            num_heads=num_heads,
                            list_neurons_feed=list_neurons_feed,
                            list_neurons_hide=list_neurons_hide,
@@ -125,6 +128,7 @@ class HyperparameterStudy:
                            max_num_stacks: int = 15,
                            max_num_heads: int = 15,
                            max_key_dim: int = 128,
+                           max_value_dim: int = 128,
                            max_epsilon: float = 1e-3,
                            max_num_neurons_layers_feed: int = 100,
                            max_num_neurons_layers_hide: int = 100,
@@ -134,6 +138,7 @@ class HyperparameterStudy:
     self.__max_num_stacks = max_num_stacks
     self.__max_num_heads = max_num_heads
     self.__max_key_dim = max_key_dim
+    self.__max_value_dim = max_value_dim
     self.__max_epsilon = max_epsilon
     self.__max_num_neurons_layers_feed = max_num_neurons_layers_feed
     self.__max_num_neurons_layers_hide = max_num_neurons_layers_hide
