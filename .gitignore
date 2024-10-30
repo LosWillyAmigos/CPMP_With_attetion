@@ -1,4 +1,5 @@
-CPMP-ML/
+.venv/
+CPMP/
 images_models/
 pruebas.ipynb
 .idea/
