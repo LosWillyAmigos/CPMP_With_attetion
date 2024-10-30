@@ -1,0 +1,131 @@
+{
+  "model": {
+    "layers": [
+      {
+        "type": "ModelCPMP",
+        "name": "cpmp_source_layer",
+        "sub_layers": [
+          {
+            "type": "Dense",
+            "name": "dense_layer",
+            "config": {
+              "units": 64,
+              "activation_dense": "sigmoid",
+              "use_bias_dense": true,
+              "kernel_initializer_dense": "glorot_uniform",
+              "bias_initializer_dense": "zeros",
+              "kernel_regularizer_dense": "L1L2",
+              "kernel_regularizer_dense_value": 0.01,
+              "bias_regularizer_dense": "L1L2",
+              "bias_regularizer_dense_value": 0.01,
+              "activity_regularizer_dense": null,
+              "kernel_constraint_dense": null,
+              "bias_constraint_dense": null
+            }
+          },
+          {
+            "type": "StackAttention",
+            "name": "stack_attention_layer",
+            "config": {
+              "num_stacks": 7,
+              "H": 7
+            },
+            "sub_layers": [
+              {
+                "type": "MultiHeadAttention",
+                "name": "multihead_attention",
+                "config": {
+                  "num_heads": 5,
+                  "dropout": 0.2,
+                  "key_dim": 64,
+                  "value_dim": 128,
+                  "use_bias_multihead": true,
+                  "output_shape": 64,
+                  "attention_axes": null,
+                  "kernel_initializer_multihead": "glorot_uniform",
+                  "bias_initializer_multihead": "zeros",
+                  "kernel_regularizer_multihead": "L1L2",
+                  "kernel_regularizer_multihead_value": 0.01,
+                  "bias_regularizer_multihead": "L1L2",
+                  "bias_regularizer_multihead_value": 0.01,
+                  "activity_regularizer_multihead": null,
+                  "kernel_constraint_multihead": null,
+                  "bias_constraint_multihead": null
+                }
+              },
+              {
+                "type": "LayerNormalization",
+                "name": "layer_normalization",
+                "config": {
+                  "axis": -1,
+                  "epsilon": 0.001,
+                  "center": true,
+                  "scale": true,
+                  "beta_initializer": "zeros",
+                  "gamma_initializer": "ones",
+                  "beta_regularizer": "L1L2",
+                  "beta_regularizer_value": 0.01,
+                  "gamma_regularizer": "L1L2",
+                  "gamma_regularizer_value": 0.01,
+                  "beta_constraint": null,
+                  "gamma_constraint": null
+                }
+              },
+              {
+                "type": "FeedForward",
+                "name": "feed_forward_hide_layer",
+                "config": {
+                  "dim_input_hide": 64,
+                  "dim_output_hide": 64,
+                  "list_neurons_hide": [256, 128, 64, 128, 256],
+                  "activation_feed_hide": "sigmoid",
+                  "use_bias_feed_hide": true,
+                  "kernel_initializer_feed_hide": "glorot_uniform",
+                  "bias_initializer_feed_hide": "zeros",
+                  "kernel_regularizer_feed_hide": "L1L2",
+                  "kernel_regularizer_feed_value_hide": 0.01,
+                  "bias_regularizer_feed_hide": "L1L2",
+                  "bias_regularizer_feed_value_hide": 0.01,
+                  "activity_regularizer_feed_hide": null,
+                  "kernel_constraint_feed_hide": null,
+                  "bias_constraint_feed_hide": null,
+                  "rate_hide": 0.000001,
+                  "noise_shape_hide": null,
+                  "seed_hide": null,
+                  "n_dropout_hide": 1
+                }
+              }
+            ]
+          },
+          {
+            "type": "FeedForward",
+            "name": "feed_forward_layer",
+            "config": {
+              "list_neurons_feed_output": [256, 128, 64, 32, 16],
+              "activation_output": "sigmoid",
+              "use_bias_output": true,
+              "kernel_initializer_output": "glorot_uniform",
+              "bias_initializer_output": "zeros",
+              "kernel_regularizer_feed_output": "L1L2",
+              "kernel_regularizer_feed_value_output": 0.01,
+              "bias_regularizer_feed_output": "L1L2",
+              "bias_regularizer_feed_value_output": 0.01,
+              "activity_regularizer_feed_output": null,
+              "kernel_constraint_feed_output": null,
+              "bias_constraint_feed_output": null,
+              "rate_output": 0.3,
+              "noise_shape_output": null,
+              "seed_output": null,
+              "n_dropout_output": 2
+            }
+          }
+        ]
+      }
+    ],
+    "compile": {
+      "optimizer": "Adam",
+      "loss": "binary_crossentropy",
+      "metrics": ["mae", "mse"]
+    }
+  }
+}

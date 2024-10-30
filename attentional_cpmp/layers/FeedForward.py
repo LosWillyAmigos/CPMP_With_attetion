@@ -1,5 +1,7 @@
 from keras.layers import Layer
 from keras.layers import Dense
+from keras.layers import Dropout
+from keras.models import Sequential
 import tensorflow as tf
 
 class FeedForward(Layer):
@@ -27,22 +29,39 @@ class FeedForward(Layer):
         # Perform a forward pass
         output = feedforward_layer(inputs)
     """
-    def __init__(self, dim_input:int = None, dim_output:int = None, activation: str = 'sigmoid', list_neurons: list = None) -> None:
+    def __init__(self, 
+                 dim_input: int,  
+                 dim_output: int,
+                 list_neurons: list[int] = None,
+                 activation: str = 'sigmoid',
+                 rate: float = 0.00001,
+                 n_dropout: int = 1) -> None:
         # Verificar si los parámetros requeridos tienen valores
+        if dim_input is None:
+            raise ValueError("dim_input has no value.")
         super(FeedForward,self).__init__()
-        self.__dense_input = Dense(dim_input, activation=activation)
-        if list_neurons is not None:
-            self.__dense_list = [Dense(neurons, activation=activation) for neurons in list_neurons]
-        else:
-            self.__dense_list = []
-        self.__dense_output = Dense(dim_output, activation=activation)
+        self.__feed = Sequential()
         
+        self.__feed.add(Dense(units=dim_input, 
+                              activation=activation, 
+                              input_shape=((None, dim_input))))
+        
+        if list_neurons is not None:
+            for i, num_neuron in enumerate(list_neurons[0:], start=0):
+                if i % 2 == 0:
+                    self.__feed.add(Dense(units=num_neuron, 
+                                      activation=activation))
+                else:
+                    self.__feed.add(Dense(units=num_neuron, 
+                                      activation="linear"))
+                if n_dropout > 0:
+                    if ((i+1) % n_dropout == 0) and rate > 0:
+                        self.__feed.add(Dropout(rate=rate))
+        
+        self.__feed.add(Dense(units=dim_output, 
+                              activation=activation))
 
-    def call(self, inputs: tf.TensorArray):
-        out = self.__dense_input(inputs)
-
-        for layer in self.__dense_list:
-            out = layer(out)
-
-        out = self.__dense_output(out)
+    @tf.function
+    def call(self, inputs: tf.TensorArray, training=True , **kwargs):
+        out = self.__feed(inputs, training=training, **kwargs)
         return out

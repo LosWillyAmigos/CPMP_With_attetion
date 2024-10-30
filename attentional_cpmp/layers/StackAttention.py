@@ -1,9 +1,13 @@
-from attentional_cpmp.layers.FeedForward import FeedForward
 from keras.layers import Layer
 from keras.layers import MultiHeadAttention
 from keras.layers import Add
 from keras.layers import LayerNormalization
+
+from attentional_cpmp.layers.FeedForward import FeedForward
+
 import tensorflow as tf
+
+from typing import Any
 
 class StackAttention(Layer):
     """
@@ -31,23 +35,46 @@ class StackAttention(Layer):
         # Perform a forward pass
         output = stack_attention_layer(inputs_o, inputs_att, training=True)
     """
-    def __init__(self, heads: int,
-                  dim_input: int =  None, 
-                  list_neuron_hide: list = None,
-                  epsilon=1e-6, 
-                  act = 'sigmoid') -> None:
-        if heads is None or dim_input is None: 
-            raise ValueError("heads or dim has no value.")
+    def __init__(self, dim_input: int,
+                  dim_output: int,
+                  num_heads: int,
+                  list_neurons: list[int],
+                  key_dim: Any,
+                  value_dim: Any | None = None,
+                  epsilon: float = 1e-6, 
+                  activation_feed_hide: str = 'sigmoid',
+                  dropout: float = 0,
+                  rate: float = 0.5,
+                  n_dropout: int = 1) -> None:
+        if num_heads is None or dim_input is None: 
+            raise ValueError("num_heads or dim has no value.")
+        if key_dim is None: 
+            raise ValueError("key_dim has no value.")
         super(StackAttention,self).__init__()
-        self.__multihead = MultiHeadAttention(num_heads=heads,key_dim=dim_input)
-        self.__feed = FeedForward(dim_input=dim_input, dim_output=dim_input, activation=act, list_neurons=list_neuron_hide)
-        self.__add = Add()
-        self.__layer_n = LayerNormalization(epsilon=epsilon)
+        self.__multihead = MultiHeadAttention(num_heads=num_heads,
+                                              key_dim=key_dim,
+                                              value_dim=value_dim,
+                                              dropout=dropout)
+        
+        
+        self.__feed = FeedForward(dim_input=dim_input,
+                                  dim_output=dim_output,
+                                  list_neurons=list_neurons,
+                                  activation=activation_feed_hide,
+                                  rate=rate,
+                                  n_dropout=n_dropout)
+        self.__add_1 = Add()
+        self.__add_2 = Add()
+        self.__layer_n_1 = LayerNormalization(epsilon=epsilon)
+        self.__layer_n_2 = LayerNormalization(epsilon=epsilon)
     
+    @tf.function
     def call(self, inputs_o: tf.TensorArray, inputs_att: tf.TensorArray, training=True):
-        att = self.__multihead(inputs_att,inputs_att, training=training)
-        feed = self.__feed(att)
-        add = self.__add([inputs_o,feed])
-        output = self.__layer_n(add)
+        att = self.__multihead(inputs_o, inputs_att, inputs_att, training=training)
+        add_1 = self.__add_1([inputs_att, att])
+        layer_n = self.__layer_n_1(add_1)
+        feed = self.__feed(layer_n)
+        add_2= self.__add_2([layer_n,feed])
+        output = self.__layer_n_2(add_2)
 
         return output

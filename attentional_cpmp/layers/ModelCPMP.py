@@ -1,8 +1,11 @@
-from keras.layers import Layer
+from keras.layers import Layer, Input
 from keras.layers import Flatten
+from keras.models import Model
 from attentional_cpmp.layers import FeedForward
 from attentional_cpmp.layers import StackAttention
 import tensorflow as tf
+
+from typing import Any
 
 class ModelCPMP(Layer):
     """
@@ -30,44 +33,69 @@ class ModelCPMP(Layer):
         # Perform a forward pass
         output = model_cpmp_layer(input_0, training=True)
     """
-    def __init__(self, heads: int = 3, 
-                 H: int = None, 
+    def __init__(self, 
+                 dim: int,
+                 list_neurons_hide: list[int],
+                 list_neurons_feed: list[int],
+                 key_dim: Any,
+                 value_dim: Any | None = None,
+                 epsilon: float = 1e-6,
+                 dropout: float = 0,
+                 rate: float = 0.5,
+                 num_heads: int = 3, 
                  num_stacks: int = None,
-                 activation:str = 'sigmoid', 
-                 epsilon:float=1e-6, 
-                 list_neurons_feed:list=None,
-                 list_neuron_hide:list=None) -> None:
+                 activation_hide: str = 'sigmoid', 
+                 activation_feed: str = 'sigmoid',
+                 n_dropout_hide: int = 1,
+                 n_dropout_feed: int = 1) -> None:
         super(ModelCPMP, self).__init__()
-        if num_stacks is None or H is None:
+        if num_stacks is None or dim is None:
             raise ValueError("Arguments has no value.")
-        self.__heads = heads
-        self.__dim = H + 1
+        self.__heads = num_heads
+        self.__dim = dim + 1
         self.__num_stack_attention = num_stacks
-        self.__activation = activation
         self.__epsilon = epsilon
-        self.__stack_list = []
-        self.__feed = FeedForward(dim_input=self.__dim, dim_output=1, 
-                                  activation='sigmoid', 
-                                  list_neurons=list_neurons_feed)
-        self.__flatt = Flatten()
-
-        for _ in range(self.__num_stack_attention):
-            custom_layer = StackAttention(heads=self.__heads,
-                                           dim_input=self.__dim,
-                                           list_neuron_hide=list_neuron_hide,
-                                           epsilon=self.__epsilon,
-                                           act=self.__activation)
-            
-            self.__stack_list.append(custom_layer)
-    
-    @tf.autograph.experimental.do_not_convert
-    def call(self, input_0: tf.TensorArray, training=True) -> None:
         
-        att = input_0
+        self.__list_neurons_hide = list_neurons_hide
+        self.__list_neurons_feed = list_neurons_feed
 
-        for stack in self.__stack_list:
-            att = stack(att, att, training)
+        self.__key_dim = key_dim
+        self.__value_dim = value_dim
+        self.__dropout = dropout
+        self.__rate = rate
 
-        dn0 = self.__feed(att)
-        fl = self.__flatt(dn0)
-        return fl
+        self.__n_dropout_hide = n_dropout_hide
+        self.__n_dropout_feed = n_dropout_feed
+        self.__activation_hide = activation_hide
+        self.__activation_feed = activation_feed
+
+        inp = Input(shape=(None, dim + 1))
+        attention = inp
+        for _ in range(self.__num_stack_attention):
+            attention = StackAttention(num_heads=self.__heads, 
+                                       dim_input=self.__dim,
+                                       dim_output=self.__dim,
+                                       list_neurons=self.__list_neurons_hide,
+                                       key_dim=self.__key_dim,
+                                       value_dim=self.__value_dim,
+                                       epsilon=self.__epsilon,
+                                       activation_feed_hide=self.__activation_hide,
+                                       n_dropout=self.__n_dropout_hide,
+                                       dropout=self.__dropout,
+                                       rate=self.__rate)(attention, attention)
+
+        feed = FeedForward(dim_input=self.__dim,
+                           dim_output=1,
+                           list_neurons=self.__list_neurons_feed,
+                           activation=self.__activation_feed,
+                           rate=self.__rate,
+                           n_dropout=self.__n_dropout_feed)(attention)
+        flttn = Flatten()(feed)
+
+        self.__model_stacks = Model(inputs=inp, outputs=flttn)
+
+    
+    @tf.function
+    def call(self, input_0: tf.TensorArray, training=True) -> None:
+        out = self.__model_stacks(input_0, training=training)
+        return out

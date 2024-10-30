@@ -28,6 +28,8 @@ class ExpandOutput(Layer):
     def __init__(self, **kwargs) -> None:
         super(ExpandOutput, self).__init__(**kwargs)
 
+    
+    @tf.function
     def call(self, inputs):
         dim = tf.shape(inputs)[1]
         expanded = tf.repeat(inputs, repeats=dim, axis=1)
