@@ -28,19 +28,21 @@ class ConcatenationLayer(Layer):
     def __init__(self, **kwargs) -> None:
         super(ConcatenationLayer, self).__init__(**kwargs)
 
+    
+    @tf.function
     def call(self, inputs: tf.TensorArray) -> None:
         labels = tf.ones(tf.shape(inputs)[1])
         labels = tf.expand_dims(labels, axis= 0)
         labels = tf.repeat(labels, repeats= tf.shape(inputs)[0], axis= 0)
 
-        matriz_identidad = tf.eye(tf.shape(labels)[-1], dtype=tf.float32)
+        diagonal_matrix = tf.eye(tf.shape(labels)[-1], dtype=tf.float32)
 
-        matrices_diagonales = labels[:, :, tf.newaxis] * matriz_identidad
-        test = tf.expand_dims(matrices_diagonales, axis= -1)
+        diagonal_matrices = labels[:, :, tf.newaxis] * diagonal_matrix
+        test = tf.expand_dims(diagonal_matrices, axis= -1)
 
-        matrices_copiadas = tf.expand_dims(inputs, axis= 1)
-        matrices_copiadas = tf.repeat(matrices_copiadas, repeats= tf.shape(labels)[1], axis= 1)
+        copied_matrices = tf.expand_dims(inputs, axis= 1)
+        copied_matrices = tf.repeat(copied_matrices, repeats= tf.shape(labels)[1], axis= 1)
 
-        results = Concatenate(axis= 3)([matrices_copiadas, test])
+        results = Concatenate(axis= 3)([copied_matrices, test])
 
         return results

@@ -27,6 +27,8 @@ class Reduction(Layer):
     def __init__(self) -> None:
         super(Reduction, self).__init__(trainable=False)
 
+    
+    @tf.function
     def call(self, arr: tf.Tensor) -> tf.Tensor:
         S = tf.sqrt(tf.cast(tf.shape(arr)[1], dtype=tf.float32))
 

@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
 
+<<<<<<< HEAD
 def create_model(heads: int = 5,
                 H: int = 5,
                 optimizer: str | None = 'Adam', 
@@ -35,12 +36,64 @@ def create_model(heads: int = 5,
                                              activation='sigmoid', 
                                              epsilon=epsilon, 
                                              num_stacks=num_stacks))(concatenation)
+=======
+from typing import Any
+
+def create_model(H: int,
+                 key_dim: Any,
+                 value_dim: Any | None = None,
+                 num_heads: int = 5,
+                 list_neurons_hide: list[int] = None,
+                 list_neurons_feed: list[int] = None,
+                 dropout: float = 0,
+                 rate: float = 0.5,
+                 activation_hide: str = 'sigmoid',
+                 activation_feed: str = 'sigmoid',
+                 n_dropout_hide: int = 1,
+                 n_dropout_feed: int = 1,
+                 epsilon:float=1e-6,
+                 num_stacks: int = 1,
+                 optimizer: str | None = 'Adam',
+                 loss: str = 'binary_crossentropy',
+                 metrics: list[str] = ['mae', 'mse']) -> Model:
+    input_layer = Input(shape=(None,H+1))
+    layer_attention_so = ModelCPMP(dim=H,
+                                   list_neurons_hide=list_neurons_hide,
+                                   list_neurons_feed=list_neurons_feed,
+                                   key_dim=key_dim,
+                                   value_dim=value_dim,
+                                   epsilon=epsilon,
+                                   dropout=dropout,
+                                   rate=rate,
+                                   num_heads=num_heads,
+                                   num_stacks=num_stacks,
+                                   activation_hide=activation_hide,
+                                   activation_feed=activation_feed,
+                                   n_dropout_hide=n_dropout_hide,
+                                   n_dropout_feed=n_dropout_feed)(input_layer)
+    expand = ExpandOutput()(layer_attention_so)
+    concatenation = ConcatenationLayer()(input_layer)
+    distributed = TimeDistributed(ModelCPMP(dim=H + 1,
+                                            list_neurons_hide=list_neurons_hide,
+                                            list_neurons_feed=list_neurons_feed,
+                                            key_dim=key_dim + 1,
+                                            value_dim=value_dim,
+                                            epsilon=epsilon,
+                                            dropout=dropout,
+                                            rate=rate,
+                                            num_heads=num_heads,
+                                            num_stacks=num_stacks,
+                                            activation_hide=activation_hide,
+                                            activation_feed=activation_feed,
+                                            n_dropout_hide=n_dropout_hide,
+                                            n_dropout_feed=n_dropout_feed))(concatenation)
+>>>>>>> develop
     unificate = Flatten()(distributed)
     mult = Multiply()([unificate,expand])
     red = Reduction()(mult)
 
     model = Model(inputs=input_layer,outputs=red)
-    model.compile(optimizer=optimizer, loss= 'binary_crossentropy', metrics= ['mae', 'mse'])
+    model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
 
     return model
 

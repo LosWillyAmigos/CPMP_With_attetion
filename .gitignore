@@ -5,3 +5,6 @@ pruebas.ipynb
 data/
 __pycache__/
 .venv/
+tests/
+data/
+hyperparameter_test/

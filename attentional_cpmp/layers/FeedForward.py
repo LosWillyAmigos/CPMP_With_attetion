@@ -1,6 +1,10 @@
 from keras.layers import Layer
 from keras.layers import Dense
 from keras.layers import Dropout
+<<<<<<< HEAD
+=======
+from keras.models import Sequential
+>>>>>>> develop
 import tensorflow as tf
 
 class FeedForward(Layer):
@@ -28,26 +32,39 @@ class FeedForward(Layer):
         # Perform a forward pass
         output = feedforward_layer(inputs)
     """
-    def __init__(self, dim_input: int, activation: str = 'sigmoid', dim_output: int = 1) -> None:
+    def __init__(self, 
+                 dim_input: int,  
+                 dim_output: int,
+                 list_neurons: list[int] = None,
+                 activation: str = 'sigmoid',
+                 rate: float = 0.00001,
+                 n_dropout: int = 1) -> None:
         # Verificar si los parámetros requeridos tienen valores
         if dim_input is None:
             raise ValueError("dim_input has no value.")
         super(FeedForward,self).__init__()
-        self.__d1 = Dense(dim_input, activation='linear')
-        self.__d2 = Dense(dim_input * 4, activation='sigmoid')
-        self.__dp1 = Dropout(0.2)
-        self.__d3 = Dense(dim_input * 3, activation='sigmoid')
-        self.__dp2 = Dropout(0.2)
-        self.__d4 = Dense(dim_input * 2, activation='sigmoid')
-        self.__d5 = Dense(dim_output, activation=activation)
+        self.__feed = Sequential()
+        
+        self.__feed.add(Dense(units=dim_input, 
+                              activation=activation, 
+                              input_shape=((None, dim_input))))
+        
+        if list_neurons is not None:
+            for i, num_neuron in enumerate(list_neurons[0:], start=0):
+                if i % 2 == 0:
+                    self.__feed.add(Dense(units=num_neuron, 
+                                      activation=activation))
+                else:
+                    self.__feed.add(Dense(units=num_neuron, 
+                                      activation="linear"))
+                if n_dropout > 0:
+                    if ((i+1) % n_dropout == 0) and rate > 0:
+                        self.__feed.add(Dropout(rate=rate))
+        
+        self.__feed.add(Dense(units=dim_output, 
+                              activation=activation))
 
-    def call(self, inputs: tf.TensorArray):
-        o1 = self.__d1(inputs)
-        o2 = self.__d2(o1)
-        d1 = self.__dp1(o2)
-        o3 = self.__d3(d1)
-        o4 = self.__d4(o3)
-        d2 = self.__dp2(o4)
-        o5 = self.__d5(d2)
-
-        return o5
+    @tf.function
+    def call(self, inputs: tf.TensorArray, training=True , **kwargs):
+        out = self.__feed(inputs, training=training, **kwargs)
+        return out
