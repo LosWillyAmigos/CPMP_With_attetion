@@ -11,9 +11,9 @@ from optuna.pruners import HyperbandPruner
 from optuna import create_study
 from keras.backend import clear_session
 
-from typing import Any
 import numpy as np
 import os
+import json
 
 class HyperparameterStudy:
   def __init__(self,
@@ -21,7 +21,8 @@ class HyperparameterStudy:
                 direction: str = 'minimize', 
                 min_resource: int = 1, 
                 max_resource: int = 100,
-                reduction_factor: int = 3) -> None:    
+                reduction_factor: int = 3,
+                dir_good_params: str = None) -> None:    
 
     # Param optimization
     self.__pruner = HyperbandPruner(min_resource=min_resource,
@@ -32,18 +33,28 @@ class HyperparameterStudy:
                                 direction=direction, 
                                 pruner=self.__pruner)
 
-    self.inser_manual_trials()
+    self.inser_manual_trials(dir_good_params)
 
   def objective(self, trial):
       clear_session()
-
       # Hiperparametros variables
       num_stacks = trial.suggest_int('num_stacks', 1, self.__max_num_stacks)
       num_heads = trial.suggest_int('num_heads', 1, self.__max_num_heads)
       key_dim = trial.suggest_int('key_dim', 1, self.__max_key_dim)
+
       value_dim = trial.suggest_int('value_dim', 0, self.__max_value_dim)
       if value_dim == 0:
           value_dim = None
+
+      dropout = trial.suggest_float('dropout', 0.0, 1.0, step=0.1)
+      rate = trial.suggest_float('param', 0.0, 1.0, step=0.1)
+
+      activation_hide = trial.suggest_categorical('activation_hide', ['linear', 'sigmoid', 'relu', 'softplus', 'gelu', 'elu', 'selu', 'exponential'])
+      activation_feed = trial.suggest_categorical('activation_feed', ['linear', 'sigmoid', 'relu', 'softplus', 'gelu', 'elu', 'selu', 'exponential'])
+      
+      n_dropout_hide = trial.suggest_int('n_dropout_hide', 1, self.__max_n_dropout_hide)
+      n_dropout_feed = trial.suggest_int('n_dropout_feed', 1, self.__max_n_dropout_feed)
+
       epsilon = trial.suggest_float('epsilon', 1e-9, self.__max_epsilon, log=True)
       num_neurons_layers_feed = trial.suggest_int('num_neurons_layers_feed', 0, self.__max_num_neurons_layers_feed)
       num_neurons_layers_hide = trial.suggest_int('num_neurons_layers_hide', 0, self.__max_num_neurons_layers_hide)
@@ -56,12 +67,12 @@ class HyperparameterStudy:
                            num_heads=num_heads,
                            list_neurons_feed=list_neurons_feed,
                            list_neurons_hide=list_neurons_hide,
-                           dropout=self.__dropout,
-                           rate=self.__rate,
-                           activation_hide=self.__activation_hide,
-                           activation_feed=self.__activation_feed,
-                           n_dropout_hide=self.__n_dropout_hide,
-                           n_dropout_feed=self.__n_dropout_feed,
+                           dropout=dropout,
+                           rate=rate,
+                           activation_hide=activation_hide,
+                           activation_feed=activation_feed,
+                           n_dropout_hide=n_dropout_hide,
+                           n_dropout_feed=n_dropout_feed,
                            epsilon=epsilon,
                            num_stacks=num_stacks,
                            optimizer=self.__optimizer,
@@ -100,25 +111,11 @@ class HyperparameterStudy:
   
   def set_config_model(self,
                       H: int,
-                      value_dim: Any | None = None,
-                      activation_hide: str = 'linear',
-                      activation_feed: str = 'sigmoid',
-                      dropout:float = 0,
-                      rate:float = 0.5,
-                      n_dropout_hide: int = 1,
-                      n_dropout_feed: int = 1,
                       optimizer: str | None = 'Adam',
                       loss: str = 'binary_crossentropy',
                       metrics: list[str] = ['mae', 'mse'],
                       verbose:int = 0):
     self.__H = H
-    self.__value_dim = value_dim
-    self.__activation_hide = activation_hide
-    self.__activation_feed = activation_feed
-    self.__n_dropout_hide = n_dropout_hide
-    self.__n_dropout_feed = n_dropout_feed
-    self.__dropout = dropout
-    self.__rate = rate
     self.__optimizer = optimizer
     self.__loss = loss
     self.__metrics = metrics
@@ -133,7 +130,9 @@ class HyperparameterStudy:
                            max_num_neurons_layers_feed: int = 100,
                            max_num_neurons_layers_hide: int = 100,
                            max_units_neurons_hide: int = 100,
-                           max_units_neurons_feed: int = 100):
+                           max_units_neurons_feed: int = 100,
+                           max_n_dropout_hide: int = 5,
+                           max_n_dropout_feed: int = 5):
     
     self.__max_num_stacks = max_num_stacks
     self.__max_num_heads = max_num_heads
@@ -144,6 +143,8 @@ class HyperparameterStudy:
     self.__max_num_neurons_layers_hide = max_num_neurons_layers_hide
     self.__max_units_neurons_hide = max_units_neurons_hide
     self.__max_units_neurons_feed = max_units_neurons_feed
+    self.__max_n_dropout_hide = max_n_dropout_hide
+    self.__max_n_dropout_feed = max_n_dropout_feed
   
   def set_training_data(self,
                         X_train: np.ndarray = None, 
@@ -161,7 +162,7 @@ class HyperparameterStudy:
 
   def set_config_callbacks(self,
                            dir: str = None,
-                           patience: int = 3,
+                           patience: int = 1,
                            verbose: int = 1,
                            restore_best_weights: bool = True,
                            metrics_monitor_callback: str = 'val_loss'):
@@ -179,10 +180,13 @@ class HyperparameterStudy:
     self.__restore_best_weights = restore_best_weights
     self.__metrics_monitor_callback = metrics_monitor_callback
 
+  def inser_manual_trials(self, dir_good_params:str):
+    if dir_good_params is None: return
 
-
-  def inser_manual_trials(self):
-    pass
+    with open(dir_good_params, 'r') as file:
+      params = json.load(file)
+    
+    self.__study.enqueue_trial(params)
 
   def optimize(self, n_trials, show_progress_bar=True):
     self.__study.optimize(func=self.objective, 
