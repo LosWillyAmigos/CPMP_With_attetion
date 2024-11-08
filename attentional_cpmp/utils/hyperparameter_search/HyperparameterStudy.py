@@ -186,7 +186,8 @@ class HyperparameterStudy:
     with open(dir_good_params, 'r') as file:
       params = json.load(file)
     
-    self.__study.enqueue_trial(params)
+    for params_i in params:
+      self.__study.enqueue_trial(params_i)
 
   def optimize(self, n_trials, show_progress_bar=True):
     self.__study.optimize(func=self.objective, 
