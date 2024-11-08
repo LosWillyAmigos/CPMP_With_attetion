@@ -52,8 +52,8 @@ class HyperparameterStudy:
       activation_hide = trial.suggest_categorical('activation_hide', ['linear', 'sigmoid', 'relu', 'softplus', 'gelu', 'elu', 'selu', 'exponential'])
       activation_feed = trial.suggest_categorical('activation_feed', ['linear', 'sigmoid', 'relu', 'softplus', 'gelu', 'elu', 'selu', 'exponential'])
       
-      n_dropout_hide = trial.suggest_int('n_dropout_hide', 1, self.__max_n_dropout_hide)
-      n_dropout_feed = trial.suggest_int('n_dropout_feed', 1, self.__max_n_dropout_feed)
+      n_dropout_hide = trial.suggest_int('n_dropout_hide', 0, self.__max_n_dropout_hide)
+      n_dropout_feed = trial.suggest_int('n_dropout_feed', 0, self.__max_n_dropout_feed)
 
       epsilon = trial.suggest_float('epsilon', 1e-9, self.__max_epsilon, log=True)
       num_neurons_layers_feed = trial.suggest_int('num_neurons_layers_feed', 0, self.__max_num_neurons_layers_feed)
