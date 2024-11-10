@@ -53,6 +53,15 @@ class BestHyperparameterSaver(Callback):
         new_dictionary['epsilon'] = dict_copy_hyp['epsilon']
         new_dictionary['key_dim'] = dict_copy_hyp['key_dim']
         new_dictionary['value_dim'] = dict_copy_hyp['value_dim']
+
+        new_dictionary['dropout'] = dict_copy_hyp['dropout']
+        new_dictionary['rate'] = dict_copy_hyp['rate']
+        new_dictionary['activation_hide'] = dict_copy_hyp['activation_hide']
+        new_dictionary['activation_feed'] = dict_copy_hyp['activation_feed']
+
+        new_dictionary['n_dropout_hide'] = dict_copy_hyp['n_dropout_hide']
+        new_dictionary['n_dropout_feed'] = dict_copy_hyp['n_dropout_feed']
+        
         new_dictionary['num_neurons_layers_feed'] = dict_copy_hyp['num_neurons_layers_feed']
         new_dictionary['num_neurons_layers_hide'] = dict_copy_hyp['num_neurons_layers_hide']
 
