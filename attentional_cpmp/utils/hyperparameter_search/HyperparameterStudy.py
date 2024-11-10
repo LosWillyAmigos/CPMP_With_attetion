@@ -46,8 +46,8 @@ class HyperparameterStudy:
       if value_dim == 0:
           value_dim = None
 
-      dropout = trial.suggest_float('dropout', 0.0, 1.0, step=0.1)
-      rate = trial.suggest_float('param', 0.0, 1.0, step=0.1)
+      dropout = trial.suggest_float('dropout', 0.0, 0.9, step=0.1)
+      rate = trial.suggest_float('param', 0.0, 0.9, step=0.1)
 
       activation_hide = trial.suggest_categorical('activation_hide', ['linear', 'sigmoid', 'relu', 'softplus', 'gelu', 'elu', 'selu', 'exponential'])
       activation_feed = trial.suggest_categorical('activation_feed', ['linear', 'sigmoid', 'relu', 'softplus', 'gelu', 'elu', 'selu', 'exponential'])
@@ -103,6 +103,10 @@ class HyperparameterStudy:
                           callbacks=[pruning_callback, 
                                      early_stopping_callback,
                                      best_hyp_saver])
+      del best_hyp_saver
+      del early_stopping_callback
+      del pruning_callback
+      del model
       
       clear_session()
       val_metric = history.history[self.__metrics_monitor_callback][-1]
