@@ -14,6 +14,7 @@ from keras.backend import clear_session
 import numpy as np
 import os
 import json
+import gc
 
 class HyperparameterStudy:
   def __init__(self,
@@ -110,6 +111,8 @@ class HyperparameterStudy:
       
       clear_session()
       val_metric = history.history[self.__metrics_monitor_callback][-1]
+
+      gc.collect()
 
       return val_metric
   
