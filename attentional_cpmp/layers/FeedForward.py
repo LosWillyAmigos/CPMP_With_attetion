@@ -61,13 +61,7 @@ class FeedForward(Layer):
         self.__feed.add(Dense(units=dim_output, 
                               activation=activation))
 
-    def call(self, inputs: tf.TensorArray):
-        o1 = self.__d1(inputs)
-        o2 = self.__d2(o1)
-        d1 = self.__dp1(o2)
-        o3 = self.__d3(d1)
-        o4 = self.__d4(o3)
-        d2 = self.__dp2(o4)
-        o5 = self.__d5(d2)
-
-        return o5
+    @tf.function
+    def call(self, inputs: tf.TensorArray, training=True , **kwargs):
+        out = self.__feed(inputs, training=training, **kwargs)
+        return out
