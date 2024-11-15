@@ -19,24 +19,6 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
 
-<<<<<<< HEAD
-def create_model(heads: int = 5,
-                H: int = 5,
-                optimizer: str | None = 'Adam', 
-                epsilon:float=1e-6,
-                num_stacks: int = 1) -> Model:
-    input_layer = Input(shape=(None,H+1))
-    layer_attention_so = ModelCPMP(H=H,heads=heads,
-                                    activation='sigmoid',
-                                    epsilon=epsilon, 
-                                    num_stacks=num_stacks)(input_layer)
-    expand = ExpandOutput()(layer_attention_so)
-    concatenation = ConcatenationLayer()(input_layer)
-    distributed = TimeDistributed(ModelCPMP(H=H+1,heads=heads,
-                                             activation='sigmoid', 
-                                             epsilon=epsilon, 
-                                             num_stacks=num_stacks))(concatenation)
-=======
 from typing import Any
 
 def create_model(H: int,
@@ -87,7 +69,6 @@ def create_model(H: int,
                                             activation_feed=activation_feed,
                                             n_dropout_hide=n_dropout_hide,
                                             n_dropout_feed=n_dropout_feed))(concatenation)
->>>>>>> develop
     unificate = Flatten()(distributed)
     mult = Multiply()([unificate,expand])
     red = Reduction()(mult)

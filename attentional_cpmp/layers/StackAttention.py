@@ -36,22 +36,6 @@ class StackAttention(Layer):
         # Perform a forward pass
         output = stack_attention_layer(inputs_o, inputs_att, training=True)
     """
-<<<<<<< HEAD
-    def __init__(self, heads: int,
-                  dim_input: int =  None,
-                  epsilon=1e-6, 
-                  act = 'sigmoid') -> None:
-        if heads is None or dim_input is None: 
-            raise ValueError("heads or dim has no value.")
-        super(StackAttention,self).__init__()
-        self.__multihead = MultiHeadAttention(num_heads=heads,key_dim=dim_input)
-        self.__feed_1 = Dense(dim_input, activation= act)
-        self.__feed_2 = Dense(dim_input, activation= 'linear')
-        self.__add_1 = Add()
-        self.__add_2 = Add()
-        self.__layer_n_1 = LayerNormalization(epsilon= epsilon)
-        self.__layer_n_2 = LayerNormalization(epsilon= epsilon)
-=======
     def __init__(self, dim_input: int,
                   dim_output: int,
                   num_heads: int,
@@ -84,24 +68,14 @@ class StackAttention(Layer):
         self.__add_2 = Add()
         self.__layer_n_1 = LayerNormalization(epsilon=epsilon)
         self.__layer_n_2 = LayerNormalization(epsilon=epsilon)
->>>>>>> develop
     
     @tf.function
     def call(self, inputs_o: tf.TensorArray, inputs_att: tf.TensorArray, training=True):
-<<<<<<< HEAD
-        att = self.__multihead(inputs_att, inputs_att, inputs_att, training=training)
-        add_1 = self.__add_1([inputs_att, att])
-        layer_n = self.__layer_n_1(add_1)
-        feed_1 = self.__feed_1(layer_n)
-        feed_2 = self.__feed_2(feed_1)
-        add_2= self.__add_2([layer_n,feed_2])
-=======
         att = self.__multihead(inputs_o, inputs_att, inputs_att, training=training)
         add_1 = self.__add_1([inputs_att, att])
         layer_n = self.__layer_n_1(add_1)
         feed = self.__feed(layer_n)
         add_2= self.__add_2([layer_n,feed])
->>>>>>> develop
         output = self.__layer_n_2(add_2)
 
         return output

@@ -1,10 +1,7 @@
 from keras.layers import Layer
 from keras.layers import Dense
 from keras.layers import Dropout
-<<<<<<< HEAD
-=======
 from keras.models import Sequential
->>>>>>> develop
 import tensorflow as tf
 
 class FeedForward(Layer):
