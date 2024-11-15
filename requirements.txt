@@ -8,3 +8,5 @@ jupyter==1.0.0
 optuna==3.6.1
 optuna-integration==3.6.0
 python-dotenv==1.0.1
+matplotlib==3.9.2
+git+https://github.com/rilianx/CPMP-ML.git@develop
