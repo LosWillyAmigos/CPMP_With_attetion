@@ -16,14 +16,14 @@ db_name = os.environ.get("DB_NAME")
 
 MONGO_URI_SERVER = f'mongodb://{db_user}:{db_password}@{db_host}/?authSource={db_name}'
 
-client_local = connect_to_server(MONGO_URI_MODEL_V2)
+client_local = connect_to_server(MONGO_URI_SERVER)
 
 base_de_datos = client_local['CPMP_With_Attention']
 data_Sx7 = load_data_mongo(base_de_datos["Sx7"])
 
 client_local.close()
 
-model_Sx7 = create_model(num_heads= 5, key_dim= 8, H= 7, num_stacks= 7)
+model_Sx7 = create_model(num_heads= 5, key_dim= 7, H= 7, num_stacks= 7)
 
 for _ in range(2):
     for stack in data_Sx7:
