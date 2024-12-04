@@ -223,7 +223,7 @@ class HyperparameterStudy:
 
   def save_all_hyp(self, trial, monitor, filename):
 
-    with open(file, 'r') as archivo:
+    with open(filename, 'r') as archivo:
       all_hyperparameters = json.load(archivo)
     hyperparameters = trial.params.copy()
         
