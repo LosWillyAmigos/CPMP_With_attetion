@@ -228,7 +228,7 @@ class HyperparameterStudy:
         all_hyperparameters = []
     else:
       with open(filename, 'r') as archivo:
-        all_hyperparameters = json.dump(archivo)
+        all_hyperparameters = json.load(archivo)
 
     hyperparameters = trial.params.copy()
         
