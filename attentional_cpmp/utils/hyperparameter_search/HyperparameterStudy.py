@@ -224,7 +224,7 @@ class HyperparameterStudy:
   def save_all_hyp(self, trial, monitor, filename):
     if not os.path.exists(filename):
       with open(filename, 'w') as archivo:
-        json.dump({}, filename, indent=4)
+        json.dump({}, archivo, indent=4)
         all_hyperparameters = []
     else:
       with open(filename, 'r') as archivo:
