@@ -1,5 +1,6 @@
 from attentional_cpmp.model import create_model
 from attentional_cpmp.utils.callbacks import  BestHyperparameterSaver
+from attentional_cpmp.utils.callbacks import HyperparameterSaver
 from attentional_cpmp.utils import create_directory
 
 from optuna.integration import TFKerasPruningCallback
@@ -14,7 +15,6 @@ from keras.backend import clear_session
 import numpy as np
 import os
 import json
-import gc
 
 class HyperparameterStudy:
   def __init__(self,
@@ -47,8 +47,8 @@ class HyperparameterStudy:
       if value_dim == 0:
           value_dim = None
 
-      dropout = trial.suggest_float('dropout', 0.0, 0.9, step=0.1)
-      rate = trial.suggest_float('rate', 0.0, 0.9, step=0.1)
+      dropout = trial.suggest_float('dropout', 0.0, 1.0, step=0.1)
+      rate = trial.suggest_float('param', 0.0, 1.0, step=0.1)
 
       activation_hide = trial.suggest_categorical('activation_hide', ['linear', 'sigmoid', 'relu', 'softplus', 'gelu', 'elu', 'selu', 'exponential'])
       activation_feed = trial.suggest_categorical('activation_feed', ['linear', 'sigmoid', 'relu', 'softplus', 'gelu', 'elu', 'selu', 'exponential'])
@@ -95,6 +95,14 @@ class HyperparameterStudy:
                                                monitor=self.__metrics_monitor_callback, 
                                                filename=self.__dir + "best_hyperparameter.json")
       
+      all_saver = HyperparameterSaver(trial,
+                                      monitor=self.__metrics_monitor_callback,
+                                      file_name=self.__dir + "hyperparameters.json")
+      
+      self.save_all_hyp(trial, 
+                        filename=self.__dir + "all_hyperparameters.json",
+                        monitor=self.__metrics_monitor_callback)
+      
       history = model.fit(x=self.__X_train, 
                           y=self.__Y_train, 
                           epochs=self.__epochs, 
@@ -103,16 +111,11 @@ class HyperparameterStudy:
                           validation_data=(self.__X_val, self.__Y_val),
                           callbacks=[pruning_callback, 
                                      early_stopping_callback,
+                                     all_saver,
                                      best_hyp_saver])
-      del best_hyp_saver
-      del early_stopping_callback
-      del pruning_callback
-      del model
       
       clear_session()
       val_metric = history.history[self.__metrics_monitor_callback][-1]
-
-      gc.collect()
 
       return val_metric
   
@@ -217,3 +220,25 @@ class HyperparameterStudy:
       best_params = self.__study.best_params
       for clave, valor in best_params.items():
           custom_file.write(f"{clave}: {valor}\n")
+
+  def save_all_hyp(self, trial, monitor, filename):
+
+    with open(file, 'r') as archivo:
+      all_hyperparameters = json.load(archivo)
+    hyperparameters = trial.params.copy()
+        
+    hyperparameters['epoch'] = epoch
+    hyperparameters[monitor] = logs.get(monitor)
+
+    neurons_feed = [hyperparameters[f'list_neurons_feed_{i}'] for i in range(hyperparameters['num_neurons_layers_feed'])]
+    neurons_hide = [hyperparameters[f'list_neurons_hide_{i}'] for i in range(hyperparameters['num_neurons_layers_hide'])]
+
+    hyperparameters['list_neurons_feed'] = neurons_feed
+    hyperparameters['list_neurons_hide'] = neurons_hide
+
+    # Añadir los hiperparámetros a la lista
+    all_hyperparameters.append(hyperparameters)
+
+    # Guardar los hiperparámetros en el archivo
+    with open(filename, 'w') as f:
+        json.dump(all_hyperparameters, f, indent=4)
