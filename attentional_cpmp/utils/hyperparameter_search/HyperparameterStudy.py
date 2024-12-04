@@ -221,20 +221,32 @@ class HyperparameterStudy:
       for clave, valor in best_params.items():
           custom_file.write(f"{clave}: {valor}\n")
 
-  def save_all_hyp(self, trial, monitor, filename):
+  import json
+import os
+
+def save_all_hyp(self, trial, monitor, filename):
+    # Verificar si el archivo existe
     if not os.path.exists(filename):
-      with open(filename, 'w') as archivo:
-        json.dump({}, archivo, indent=4)
+        # Si no existe, crearlo y escribir un diccionario vacío
+        with open(filename, 'w') as archivo:
+            json.dump({}, archivo, indent=4)
         all_hyperparameters = []
     else:
-      with open(filename, 'r') as archivo:
-        all_hyperparameters = json.load(archivo)
+        # Verificar si el archivo está vacío
+        with open(filename, 'r') as archivo:
+            try:
+                all_hyperparameters = json.load(archivo)
+            except json.decoder.JSONDecodeError:
+                # Si hay un error al cargar (archivo vacío o con formato incorrecto), inicializar como lista vacía
+                all_hyperparameters = []
 
+    # Copiar los parámetros del trial
     hyperparameters = trial.params.copy()
         
     hyperparameters['epoch'] = epoch
     hyperparameters[monitor] = logs.get(monitor)
 
+    # Recoger las neuronas de las capas
     neurons_feed = [hyperparameters[f'list_neurons_feed_{i}'] for i in range(hyperparameters['num_neurons_layers_feed'])]
     neurons_hide = [hyperparameters[f'list_neurons_hide_{i}'] for i in range(hyperparameters['num_neurons_layers_hide'])]
 
@@ -247,3 +259,4 @@ class HyperparameterStudy:
     # Guardar los hiperparámetros en el archivo
     with open(filename, 'w') as f:
         json.dump(all_hyperparameters, f, indent=4)
+
