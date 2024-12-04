@@ -239,9 +239,6 @@ class HyperparameterStudy:
   
       # Copiar los parámetros del trial
       hyperparameters = trial.params.copy()
-          
-      hyperparameters['epoch'] = epoch
-      hyperparameters[monitor] = logs.get(monitor)
   
       # Recoger las neuronas de las capas
       neurons_feed = [hyperparameters[f'list_neurons_feed_{i}'] for i in range(hyperparameters['num_neurons_layers_feed'])]
