@@ -222,9 +222,14 @@ class HyperparameterStudy:
           custom_file.write(f"{clave}: {valor}\n")
 
   def save_all_hyp(self, trial, monitor, filename):
+    if not os.path.exists(filename):
+      with open(filename, 'w') as archivo:
+        json.dump({}, filename, indent=4)
+        all_hyperparameters = []
+    else:
+      with open(filename, 'r') as archivo:
+        all_hyperparameters = json.dump(archivo)
 
-    with open(filename, 'r') as archivo:
-      all_hyperparameters = json.dump(archivo)
     hyperparameters = trial.params.copy()
         
     hyperparameters['epoch'] = epoch
