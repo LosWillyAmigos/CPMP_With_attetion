@@ -97,7 +97,7 @@ class HyperparameterStudy:
       
       all_saver = HyperparameterSaver(trial,
                                       monitor=self.__metrics_monitor_callback,
-                                      file_name=self.__dir + "hyperparameters.json")
+                                      filename=self.__dir + "hyperparameters.json")
       
       self.save_all_hyp(trial, 
                         filename=self.__dir + "all_hyperparameters.json",
