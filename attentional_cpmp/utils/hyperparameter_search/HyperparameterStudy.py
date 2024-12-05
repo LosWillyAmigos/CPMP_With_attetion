@@ -47,8 +47,8 @@ class HyperparameterStudy:
       if value_dim == 0:
           value_dim = None
 
-      dropout = trial.suggest_float('dropout', 0.0, 1.0, step=0.1)
-      rate = trial.suggest_float('param', 0.0, 1.0, step=0.1)
+      dropout = trial.suggest_float('dropout', 0.0, 0.9)
+      rate = trial.suggest_float('param', 0.0, 0.9)
 
       activation_hide = trial.suggest_categorical('activation_hide', ['linear', 'sigmoid', 'relu', 'softplus', 'gelu', 'elu', 'selu', 'exponential'])
       activation_feed = trial.suggest_categorical('activation_feed', ['linear', 'sigmoid', 'relu', 'softplus', 'gelu', 'elu', 'selu', 'exponential'])
