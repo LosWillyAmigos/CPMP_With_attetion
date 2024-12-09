@@ -1,12 +1,11 @@
 from attentional_cpmp.model import create_model
-from attentional_cpmp.utils.callbacks import  BestHyperparameterSaver
-from attentional_cpmp.utils.callbacks import HyperparameterSaver
+from attentional_cpmp.utils.callbacks.optuna import  BestHyperparameterSaver
+from attentional_cpmp.utils.callbacks.optuna import HyperparameterSaver
 from attentional_cpmp.utils import create_directory
 
 from optuna.integration import TFKerasPruningCallback
 from keras.callbacks import EarlyStopping
 
-from optuna.visualization import plot_param_importances
 from optuna.importance import get_param_importances
 from optuna.pruners import HyperbandPruner
 from optuna import create_study
@@ -25,7 +24,6 @@ class HyperparameterStudy:
                 reduction_factor: int = 3,
                 dir_good_params: str = None) -> None:    
 
-    # Param optimization
     self.__pruner = HyperbandPruner(min_resource=min_resource,
                                     max_resource=max_resource, 
                                     reduction_factor=reduction_factor)
@@ -48,7 +46,7 @@ class HyperparameterStudy:
           value_dim = None
 
       dropout = trial.suggest_float('dropout', 0.0, 0.9)
-      rate = trial.suggest_float('param', 0.0, 0.9)
+      rate = trial.suggest_float('rate', 0.0, 0.9)
 
       activation_hide = trial.suggest_categorical('activation_hide', ['linear', 'sigmoid', 'relu', 'softplus', 'gelu', 'elu', 'selu', 'exponential'])
       activation_feed = trial.suggest_categorical('activation_feed', ['linear', 'sigmoid', 'relu', 'softplus', 'gelu', 'elu', 'selu', 'exponential'])
@@ -93,14 +91,16 @@ class HyperparameterStudy:
       
       best_hyp_saver = BestHyperparameterSaver(trial, 
                                                monitor=self.__metrics_monitor_callback, 
-                                               filename=self.__dir + "best_hyperparameter.json")
+                                               filename=self.__dir + "best_hyperparameter.json",
+                                               metrics=self.__metrics)
       
       all_saver = HyperparameterSaver(trial,
                                       monitor=self.__metrics_monitor_callback,
-                                      filename=self.__dir + "hyperparameters.json")
+                                      filename=self.__dir + "all_hyperparameters.json",
+                                      metrics=self.__metrics)
       
       self.save_all_hyp(trial, 
-                        filename=self.__dir + "all_hyperparameters.json",
+                        filename=self.__dir + "all_hyperparameters_not_filter.json",
                         monitor=self.__metrics_monitor_callback)
       
       history = model.fit(x=self.__X_train, 
@@ -108,7 +108,7 @@ class HyperparameterStudy:
                           epochs=self.__epochs, 
                           batch_size=self.__batch_size, 
                           verbose=self.__verbose, 
-                          validation_data=(self.__X_val, self.__Y_val),
+                          validation_split=self.__validation_split,
                           callbacks=[pruning_callback, 
                                      early_stopping_callback,
                                      all_saver,
@@ -123,7 +123,7 @@ class HyperparameterStudy:
                       H: int,
                       optimizer: str | None = 'Adam',
                       loss: str = 'binary_crossentropy',
-                      metrics: list[str] = ['mae', 'mse'],
+                      metrics: list[str] = None,
                       verbose:int = 0):
     self.__H = H
     self.__optimizer = optimizer
@@ -159,14 +159,12 @@ class HyperparameterStudy:
   def set_training_data(self,
                         X_train: np.ndarray = None, 
                         Y_train: np.ndarray = None, 
-                        X_val: np.ndarray = None, 
-                        Y_val: np.ndarray = None, 
+                        validation_split: float = 0.2,
                         epochs: int = 20, 
                         batch_size: int = 32) -> None:
     self.__X_train = X_train
     self.__Y_train = Y_train
-    self.__X_val = X_val
-    self.__Y_val = Y_val
+    self.__validation_split = validation_split
     self.__epochs = epochs
     self.__batch_size = batch_size
 
@@ -210,16 +208,6 @@ class HyperparameterStudy:
     print("********** Importance of hyperparameters: **********")
     for param, importance in param_importances.items():
         print(f"  {param}: {importance:.8f}")
-  
-  def display(self):
-    plot_param_importances(self.__study)
-  
-  def save(self, filename: str = None):
-    if filename is None: filename = self.__study_name
-    with open(filename + '.hyp', 'w') as custom_file:
-      best_params = self.__study.best_params
-      for clave, valor in best_params.items():
-          custom_file.write(f"{clave}: {valor}\n")
 
   def save_all_hyp(self, trial, monitor, filename):
       # Verificar si el archivo existe
