@@ -7,6 +7,5 @@ __pycache__/
 .venv/
 data/
 hyperparameter_test/
-test/
 data/
 colabs/
