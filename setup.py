@@ -21,5 +21,12 @@ setup(
     url='https://github.com/LosWillyAmigos/CPMP_With_attention',
     packages=find_packages(include=("attentional_cpmp", "attentional_cpmp.*")),
     install_requires=read_requirements('requirements.txt'),
-    python_requires='>=3.10',
+    dependency_links=[
+        "git+https://github.com/rilianx/CPMP-ML.git@develop#egg=CPMP-ML"
+    ],
+    python_requires=">=3.10,<3.12",
+    packages=find_packages(
+        include=("attentional_cpmp", "attentional_cpmp.*"),
+        exclude=["models", "models.*", "scripts", "scripts.*"]
+    )
 )
