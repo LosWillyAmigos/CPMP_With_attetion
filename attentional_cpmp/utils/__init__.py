@@ -5,3 +5,5 @@ from attentional_cpmp.utils.data_saving.mongodb import load_data_mongo
 from attentional_cpmp.utils.data_saving.mongodb import load_data_mongo_2
 from attentional_cpmp.utils.data_saving.mongodb import save_data_mongo
 from attentional_cpmp.utils.functions import create_directory
+from attentional_cpmp.utils.functions import get_data
+from attentional_cpmp.utils.functions import split_data

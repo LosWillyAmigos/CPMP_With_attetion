@@ -1,1 +1,2 @@
 from attentional_cpmp.utils.hyperparameter_search.HyperparameterStudy import HyperparameterStudy
+from attentional_cpmp.utils.hyperparameter_search.functions import build_model
