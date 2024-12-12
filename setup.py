@@ -19,7 +19,6 @@ setup(
     author='Matias Bugueño B., Thomas Molina S.',
     author_email='matias.bugueno@pucv.cl, thomas.molina@pucv,cl',
     url='https://github.com/LosWillyAmigos/CPMP_With_attention',
-    packages=find_packages(include=("attentional_cpmp", "attentional_cpmp.*")),
     install_requires=read_requirements('requirements.txt'),
     dependency_links=[
         "git+https://github.com/rilianx/CPMP-ML.git@develop#egg=CPMP-ML"
