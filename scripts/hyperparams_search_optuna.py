@@ -1,8 +1,14 @@
 from attentional_cpmp.utils.hyperparameter_search import HyperparameterStudy
 from attentional_cpmp.utils.data_saving.data_json import load_data_from_json
 from attentional_cpmp.utils import get_data
+
+from optuna.pruners import MedianPruner
+from optuna.storages import JournalStorage
+from optuna.storages.journal import JournalFileBackend
+
+from datetime import datetime
+
 import argparse
-import random
 import json
 import psutil
 import os
@@ -29,17 +35,19 @@ if __name__ == "__main__":
     parser.add_argument('H',
                         type=int,
                         help="Configura la entrada del modelo.")
-    parser.add_argument('list_cpu', 
-                        type=str,
-                        help="Lista nucleos a ocupar")
     
     
     # Parametros opcionales
+    parser.add_argument('--list_cpu', 
+                        type=str,
+                        help="Lista nucleos a ocupar",
+                        required=False,
+                        default=None)
     parser.add_argument('--study_name', '-sn',
                         type=str,
                         help="Nombre del estudio",
-                        required=False,
-                        default="Study_Model_CPMP")
+                        required=None,
+                        default=None)
     parser.add_argument('--dir_good_hyp', '-gh',
                         type=str,
                         help="Directorio de hiperparametros sugeridos.",
@@ -74,7 +82,12 @@ if __name__ == "__main__":
                        type=str,
                        help="Dirección requerida por los callbacks",
                        required=False,
-                       default=None)
+                       default="./hyperparameter_test/")
+    parser.add_argument('--storage_name',
+                       type=str,
+                       help="Nombre del storage que guarda los estudios",
+                       required=False,
+                       default="Study_CPMP_log.json")
     parser.add_argument('--epochs',
                        type=int,
                        help="Cantidad de epocas de entrenamiento",
@@ -85,32 +98,52 @@ if __name__ == "__main__":
                        help="Cantidad de batch de entrenamiento",
                        required=False,
                        default=32)
+    parser.add_argument('--n_jobs',
+                       type=int,
+                       help="Cantidad nucleos a usar en paralelo",
+                       required=False,
+                       default=1)
+    parser.add_argument('--load_if_exists',
+                       type=bool,
+                       help="Cargar backend si existe",
+                       required=False,
+                       default=False)
     
     args = parser.parse_args()
     # Limitar el proceso actual
-    if args.list_cpu:
+    if args.list_cpu is not None:
         list_core = list(map(int, args.list_cpu.split(",")))
     
-    process = psutil.Process(os.getpid())
-    process.cpu_affinity(list_core)
+        process = psutil.Process(os.getpid())
+        process.cpu_affinity(list_core)
     
     
-    print("Cargando datos...")
+    print("Loading data...")
     data_Sx7 = load_data_from_json(args.path_data)
     x, y = get_data(data_Sx7, args.data_dimesion_type)
     del data_Sx7
-    print("Datos cargados...")
-    print("Empezando creación de estudio...")
-    study = HyperparameterStudy(study_name=args.study_name,
+    print("Data loaded!")
+
+    print("Starting study creation...")
+    if args.study_name is None:
+        now = datetime.now()
+        date = now.strftime("%Y-%m-%d_%H:%M:%S")
+        study_name = f"Study_CPMP_{date}"
+    else:
+        study_name = args.study_name
+    
+    if args.storage_name is None:
+        storage_name = "Study_CPMP_log.json"
+    else:
+        storage_name = args.storage_name
+
+    study = HyperparameterStudy(study_name=study_name,
                                 dir_good_params=args.dir_good_hyp,
-                                min_resource=args.min_r,
-                                max_resource=args.max_r,
-                                reduction_factor=args.red_factor)
-    print("Estudio creado")
-    print("Configurando estudio...")
-    study.set_training_data(X_train=x, Y_train=y,
-                            validation_split=args.percentage,
-                            epochs=args.epochs, batch_size=args.batch_size)
+                                pruner=MedianPruner(),
+                                storage=JournalStorage(JournalFileBackend(storage_name)),
+                                load_if_exists=args.load_if_exists)
+    print("Study created")
+    print("Setting up study...")
     
     if args.path_max_config is None:
         study.set_max_config_trial()
@@ -120,12 +153,16 @@ if __name__ == "__main__":
         study.set_max_config_trial(**params)
     
     study.set_config_model(H=args.H, verbose=args.verbose,
-                           metrics=['mae', 'mse', 'accuracy'])
-    study.set_config_callbacks(dir=args.dir_callback)
-    print("Estudio configurado")
+                           metrics=['mae', 'mse', 'accuracy'],
+                           X_train=x, Y_train=y,
+                           validation_split=args.percentage,
+                           epochs=args.epochs, batch_size=args.batch_size)
+    study.set_config_callbacks(dir=args.dir_callback, patience=2)
+    print("Study set up")
 
-    print("Empezando optimización...")
+    print("Starting optimization...")
 
-    study.optimize(n_trials=args.n_trials)
+    study.optimize(n_trials=args.n_trials,
+                   n_jobs=args.n_jobs)
 
-    print("Optimización finalizada")
+    print("Optimization completed")

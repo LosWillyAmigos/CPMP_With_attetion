@@ -1,7 +1,7 @@
 from attentional_cpmp.utils.data_saving.data_json import load_data_from_json
 from attentional_cpmp.utils.hyperparameter_search import build_model
 from attentional_cpmp.utils import get_data
-from keras.metrics import Precision
+
 from keras.callbacks import EarlyStopping
 
 import argparse
@@ -10,6 +10,45 @@ import psutil
 import os
 
 import keras_tuner as kt
+
+import json
+
+def save_hyperparameters_results(tuner, output_file='hyperparameters_results_keras.json'):
+
+    all_trials = []
+
+    for trial in tuner.oracle.get_trials():
+        trial_data = {
+            'trial_id': trial.trial_id,
+            'hyperparameters': trial.hyperparameters.values,
+            'metrics': {k: v[-1] for k, v in trial.metrics.result().items()}
+        }
+        all_trials.append(trial_data)
+
+    with open(output_file, 'w') as f:
+        json.dump(all_trials, f, indent=4)
+
+    print(f"Resultados guardados en {output_file}")
+
+import json
+
+def save_best_hyperparameters(tuner, num_trials=1, output_file='best_hyperparameters.json'):
+    
+    best_hps = tuner.get_best_hyperparameters(num_trials=num_trials)
+    best_hyperparameters = []
+
+    for i, hp in enumerate(best_hps):
+        hp_data = {
+            'rank': i + 1, 
+            'hyperparameters': hp.values
+        }
+        best_hyperparameters.append(hp_data)
+
+    with open(output_file, 'w') as f:
+        json.dump(best_hyperparameters, f, indent=4)
+
+    print(f"Mejores hiperparámetros guardados en {output_file}")
+
 
 
 if __name__ == "__main__":
@@ -36,10 +75,12 @@ if __name__ == "__main__":
                         type=str,
                         help="tuner a usar en las pruebas.",
                         default="random")
-    parser.add_argument('list_cpu', 
+    
+    parser.add_argument('--list_cpu', 
                         type=str,
-                        help="Lista nucleos a ocupar")
-
+                        help="Lista nucleos a ocupar",
+                        required=False,
+                        default=None)
     parser.add_argument('--dir_tuner',
                        type=str,
                        help="Dirección requerida por los tuner",
@@ -76,13 +117,19 @@ if __name__ == "__main__":
                        required=False,
                        default=2)
     
+    parser.add_argument('--dir',
+                       type=str,
+                       help="Directorio para almacenar resultados",
+                       required=False,
+                       default=None)
+    
     args = parser.parse_args()
 
-    if args.list_cpu:
+    if args.list_cpu is not None:
         list_core = list(map(int, args.list_cpu.split(",")))
     
-    process = psutil.Process(os.getpid())
-    process.cpu_affinity(list_core)
+        process = psutil.Process(os.getpid())
+        process.cpu_affinity(list_core)
 
     print("Cargando datos...")
 
@@ -153,17 +200,13 @@ if __name__ == "__main__":
                                             verbose=1)],
                  verbose=1)
     
+    save_hyperparameters_results(tuner, output_file= args.dir + 'all_hiperparameters_keras.json')
+    save_best_hyperparameters(tuner, num_trials=3, output_file=args.dir + 'best_hiperparameters_keras.json')
+
 
     best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
-    best_hps_dict = best_hps.values
-
-    with open('best_hyperparameters_keras.json', 'w') as json_file:
-        json.dump(best_hps_dict, json_file, indent=4)
-
-    print("Hiperparámetros guardados en 'best_hyperparameters_keras.json'")
 
     best_model = tuner.hypermodel.build(best_hps)
-
     best_model.fit(x_train, 
                    y_train, 
                    epochs=args.epochs, 
