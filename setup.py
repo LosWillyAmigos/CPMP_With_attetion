@@ -8,7 +8,7 @@ def read_requirements(filename):
 
 HERE = pathlib.Path(__file__).parent
 README = (HERE / "README.md").read_text()
-VERSION = "1.1.0"
+VERSION = "2.6.1"
 
 setup(
     name='Attentional_CPMP',
