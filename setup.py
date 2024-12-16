@@ -1,4 +1,3 @@
-import os
 import pathlib
 from setuptools import find_packages, setup
 
@@ -25,12 +24,11 @@ setup(
         "pydot==1.4.2",
         "graphviz==0.20.3",
         "jupyter==1.0.0",
-        "optuna==3.6.1",
-        "keras-tuner==1.4.7"
-    ],
-    dependency_links=[
-        "git+https://github.com/rilianx/CPMP-ML.git@develop#egg=CPMP-ML"
-    ],
+        "optuna==4.1.0",
+        "optuna-integration==3.6.0",
+        "keras-tuner==1.4.7",
+        "cpmp_ml @ git+https://github.com/rilianx/CPMP-ML.git@develop#egg=cpmp_ml"
+    ]
     python_requires=">=3.10,<3.12",
     packages=find_packages(
         include=("attentional_cpmp", "attentional_cpmp.*"),
