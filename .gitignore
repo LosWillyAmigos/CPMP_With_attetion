@@ -9,3 +9,4 @@ data/
 hyperparameter_test/
 data/
 colabs/
+slurm/
