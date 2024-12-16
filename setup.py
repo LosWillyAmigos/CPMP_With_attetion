@@ -28,7 +28,7 @@ setup(
         "optuna-integration==3.6.0",
         "keras-tuner==1.4.7",
         "cpmp_ml @ git+https://github.com/rilianx/CPMP-ML.git@develop#egg=cpmp_ml"
-    ]
+    ],
     python_requires=">=3.10,<3.12",
     packages=find_packages(
         include=("attentional_cpmp", "attentional_cpmp.*"),
