@@ -37,7 +37,7 @@ def create_model(H: int,
                  num_stacks: int = 1,
                  optimizer: str | None = 'Adam',
                  loss: str = 'binary_crossentropy',
-                 metrics: list[str] = ['mae', 'mse']) -> Model:
+                 metrics: list[Any] = ['mae', 'mse']) -> Model:
     input_layer = Input(shape=(None,H+1))
     layer_attention_so = ModelCPMP(dim=H,
                                    list_neurons_hide=list_neurons_hide,
