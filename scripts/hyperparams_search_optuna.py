@@ -1,5 +1,5 @@
 from attentional_cpmp.utils.hyperparameter_search import HyperparameterStudy
-from attentional_cpmp.utils.data_saving.data_json import load_data_from_json
+from attentional_cpmp.utils.data_saving import load_data_from_json
 from attentional_cpmp.utils import get_data
 
 from optuna.pruners import MedianPruner
@@ -53,21 +53,6 @@ if __name__ == "__main__":
                         help="Directorio de hiperparametros sugeridos.",
                         required=False,
                         default=None)
-    parser.add_argument('--min_r', '-mir',
-                        type=int,
-                        help="Controla el punto de partida de recursos de cada ensayo.",
-                        required=False,
-                        default=1)
-    parser.add_argument('--max_r', '-mar',
-                        type=int,
-                        help="Establece el máximo de recursos que un ensayo puede usar.",
-                        required=False,
-                        default=10)
-    parser.add_argument('--red_factor', '-rf',
-                        type=int,
-                        help="Determina cuántos ensayos pasan a la siguiente ronda.",
-                        required=False,
-                        default=5)
     parser.add_argument('--verbose', '-v',
                         type=int,
                         help="Muestra el progreso de entrenamiento del modelo.",
