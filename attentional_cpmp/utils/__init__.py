@@ -1,5 +1,7 @@
 from attentional_cpmp.utils.data_saving.local import load_data
 from attentional_cpmp.utils.data_saving.local import save_data
+from attentional_cpmp.utils.data_saving.data_json import load_data_json
+from attentional_cpmp.utils.data_saving.data_json import save_data_json
 from attentional_cpmp.utils.data_saving.mongodb import connect_to_server
 from attentional_cpmp.utils.data_saving.mongodb import load_data_mongo
 from attentional_cpmp.utils.data_saving.mongodb import load_data_mongo_2
