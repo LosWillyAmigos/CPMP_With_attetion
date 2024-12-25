@@ -1,7 +1,8 @@
 import numpy as np
 import pymongo
+import re
 
-def connect_to_server(uri: str) -> None:
+def connect_to_server(uri: str) -> pymongo.MongoClient:
     """
     The purpose of this function is to establish 
     a connection between the MongoDB server and the program.
@@ -10,17 +11,20 @@ def connect_to_server(uri: str) -> None:
         uri (string): The URL of the MongoDB server.
     """
     try: 
-        client = pymongo.MongoClient(uri, serverSelectionTimeoutMS= 1000)
+        client = pymongo.MongoClient(uri, serverSelectionTimeoutMS= 10000)
         client.server_info()
         print('Conection Success')
 
         return client
     
     except pymongo.errors.ServerSelectionTimeoutError as identifier:
-        print('tiempo excedido' + identifier)
+        patron = r"Timeout: ([\d\.]+)s"
+        time = re.search(patron, str(identifier))
+
+        print(f'Tiempo de espera excedido: {time.group(1)}\n')
 
     except pymongo.errors.ConnectionFailure as conection_Error:
-        print('Error al conectarse a mongodb' + conection_Error)
+        print('Error al conectarse a mongodb: ' + str(conection_Error))
 
 def load_data_mongo(collection):
     """
@@ -30,24 +34,32 @@ def load_data_mongo(collection):
         collection: The MongoDB client's database from which 
                     to load the data.
     """
-    data = dict()
-    for states in collection.find():
-        if str(len(states['States'])) not in data:
-            data.update({str(len(states['States'])): {'States': [states['States']], 'Labels': [states['Labels']]}})
-        else:
-            data[str(len(states['States']))]['States'].append(states['States'])
-            data[str(len(states['States']))]['Labels'].append(states['Labels'])
+    try:
+        data = dict()
+        for states in collection.find():
+            if str(len(states['States'])) not in data:
+                data.update({str(len(states['States'])): {'States': [states['States']], 'Labels': [states['Labels']]}})
+            else:
+                data[str(len(states['States']))]['States'].append(states['States'])
+                data[str(len(states['States']))]['Labels'].append(states['Labels'])
 
-    return data
+        return data
+    except pymongo.errors.ConnectionFailure as conection_Error:
+        print('Error en la conexión con la base de datos: ' + str(conection_Error))
+        return None
 
 def load_data_mongo_2(collection):
-    data, labels = [], []
+    try:
+        data, labels = [], []
 
-    for states in collection.find():
-        data.append(np.array(states['States']))
-        labels.append(np.array(states['Labels']))
+        for states in collection.find():
+            data.append(np.array(states['States']))
+            labels.append(np.array(states['Labels']))
 
-    return data, labels
+        return data, labels
+    except pymongo.errors.ConnectionFailure as conection_Error:
+        print('Error en la conexión con la base de datos: ' + str(conection_Error))
+        return None, None
 
 def save_data_mongo(collection, data: list[np.ndarray], labels: list[np.ndarray]):
     """
@@ -74,5 +86,7 @@ def save_data_mongo(collection, data: list[np.ndarray], labels: list[np.ndarray]
                 state = {'States': data[i], 'Labels': labels[i].tolist()}
                 
             collection.insert_one(state)
+            return True
         except pymongo.errors.ConnectionFailure as conection_Error:
-            print('Error al conectarse a mongodb' + conection_Error)
+            print('Error en la conexión con la base de datos: ' + str(conection_Error))
+            return False
