@@ -16,7 +16,7 @@ setup(
     author="EDANHS and Slinking196",
     install_requires=[
         "numpy==1.26.3",
-        "tensorflow==2.15.0",
+        "tensorflow==2.18.0",
         "scikit-learn==1.4.0",
         "pymongo==4.6.1",
         "matplotlib==3.8.2",
@@ -24,7 +24,7 @@ setup(
         "pydot==1.4.2",
         "graphviz==0.20.3",
         "jupyter==1.0.0",
-        "optuna==3.6.1"
+        "optuna==4.1.0"
     ],
     dependency_links=[
         "git+https://github.com/rilianx/CPMP-ML.git@develop#egg=CPMP-ML"
