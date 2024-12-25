@@ -1,4 +1,4 @@
-from keras.layers import Layer
+from keras.api.layers import Layer
 import tensorflow as tf
 
 class ExpandOutput(Layer):
@@ -29,7 +29,7 @@ class ExpandOutput(Layer):
         super(ExpandOutput, self).__init__(**kwargs)
 
     
-    @tf.function
+    @tf.autograph.experimental.do_not_convert
     def call(self, inputs):
         dim = tf.shape(inputs)[1]
         expanded = tf.repeat(inputs, repeats=dim, axis=1)

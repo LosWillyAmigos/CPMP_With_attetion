@@ -1,4 +1,4 @@
-from keras.layers import Layer
+from keras.api.layers import Layer
 import tensorflow as tf
 
 class Reduction(Layer):
@@ -24,17 +24,31 @@ class Reduction(Layer):
         # Perform a forward pass
         output = reduction_layer(arr)
     """
-    def __init__(self) -> None:
+    def __init__(self, **kwargs) -> None:
         super(Reduction, self).__init__(trainable=False)
 
     
     @tf.function
     def call(self, arr: tf.Tensor) -> tf.Tensor:
-        S = tf.sqrt(tf.cast(tf.shape(arr)[1], dtype=tf.float32))
+        size = tf.shape(arr)[1]
+        tf.print("La entrada es de forma cuadrática, tamaño:", size)
+        S = tf.cast(tf.sqrt(tf.cast(size, dtype=tf.float32)), dtype=tf.int32)
+        
+        tf.debugging.assert_equal(
+            S * S,
+            size,
+            message="La entrada no tiene una forma cuadrática válida."
+        )
+
+        
 
         aux = tf.math.logical_not(tf.eye(S, dtype=tf.bool))
         mask = tf.reshape(aux, [-1])
+        tf.print("Máscara creada, longitud:", tf.shape(mask))
         
         output = tf.boolean_mask(arr, mask, axis=1)
 
         return output
+    
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], None)

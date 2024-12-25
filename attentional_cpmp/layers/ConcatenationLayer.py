@@ -1,5 +1,5 @@
-from keras.layers import Layer
-from keras.layers import Concatenate
+from keras.api.layers import Layer
+from keras.api.layers import Concatenate
 import tensorflow as tf
 
 class ConcatenationLayer(Layer):
@@ -29,7 +29,7 @@ class ConcatenationLayer(Layer):
         super(ConcatenationLayer, self).__init__(**kwargs)
 
     
-    @tf.function
+    @tf.autograph.experimental.do_not_convert
     def call(self, inputs: tf.TensorArray) -> None:
         labels = tf.ones(tf.shape(inputs)[1])
         labels = tf.expand_dims(labels, axis= 0)

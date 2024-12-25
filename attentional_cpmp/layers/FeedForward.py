@@ -1,7 +1,7 @@
-from keras.layers import Layer
-from keras.layers import Dense
-from keras.layers import Dropout
-from keras.models import Sequential
+from keras.api.layers import Layer
+from keras.api.layers import Dense
+from keras.api.layers import Dropout
+from keras.api.models import Sequential
 import tensorflow as tf
 
 class FeedForward(Layer):
@@ -35,11 +35,12 @@ class FeedForward(Layer):
                  list_neurons: list[int] = None,
                  activation: str = 'sigmoid',
                  rate: float = 0.00001,
-                 n_dropout: int = 1) -> None:
+                 n_dropout: int = 1,
+                 **kwargs) -> None:
         # Verificar si los parámetros requeridos tienen valores
         if dim_input is None:
             raise ValueError("dim_input has no value.")
-        super(FeedForward,self).__init__()
+        super(FeedForward,self).__init__(**kwargs)
         self.__feed = Sequential()
         
         self.__feed.add(Dense(units=dim_input, 
@@ -61,7 +62,7 @@ class FeedForward(Layer):
         self.__feed.add(Dense(units=dim_output, 
                               activation=activation))
 
-    @tf.function
+    @tf.autograph.experimental.do_not_convert
     def call(self, inputs: tf.TensorArray, training=True , **kwargs):
         out = self.__feed(inputs, training=training, **kwargs)
         return out

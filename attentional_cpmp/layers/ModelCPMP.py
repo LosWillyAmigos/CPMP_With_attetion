@@ -1,6 +1,6 @@
-from keras.layers import Layer, Input
-from keras.layers import Flatten
-from keras.models import Model
+from keras.api.layers import Layer, Input
+from keras.api.layers import Reshape
+from keras.api.models import Model
 from attentional_cpmp.layers import FeedForward
 from attentional_cpmp.layers import StackAttention
 import tensorflow as tf
@@ -47,8 +47,9 @@ class ModelCPMP(Layer):
                  activation_hide: str = 'sigmoid', 
                  activation_feed: str = 'sigmoid',
                  n_dropout_hide: int = 1,
-                 n_dropout_feed: int = 1) -> None:
-        super(ModelCPMP, self).__init__()
+                 n_dropout_feed: int = 1,
+                 **kwargs) -> None:
+        super(ModelCPMP, self).__init__(**kwargs)
         if num_stacks is None or dim is None:
             raise ValueError("Arguments has no value.")
         self.__heads = num_heads
@@ -90,12 +91,15 @@ class ModelCPMP(Layer):
                            activation=self.__activation_feed,
                            rate=self.__rate,
                            n_dropout=self.__n_dropout_feed)(attention)
-        flttn = Flatten()(feed)
+        flttn = Reshape((-1,))(feed)
 
         self.__model_stacks = Model(inputs=inp, outputs=flttn)
 
     
-    @tf.function
+    @tf.autograph.experimental.do_not_convert
     def call(self, input_0: tf.TensorArray, training=True) -> None:
         out = self.__model_stacks(input_0, training=training)
         return out
+    
+    def compute_output_shape(self, input_shape):
+        return (None, None, None)

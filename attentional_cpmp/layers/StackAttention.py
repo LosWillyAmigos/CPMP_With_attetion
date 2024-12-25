@@ -1,8 +1,8 @@
-from keras.layers import Layer
-from keras.layers import MultiHeadAttention
-from keras.layers import Add
-from keras.layers import Dense
-from keras.layers import LayerNormalization
+from keras.api.layers import Layer
+from keras.api.layers import MultiHeadAttention
+from keras.api.layers import Add
+from keras.api.layers import Dense
+from keras.api.layers import LayerNormalization
 
 from attentional_cpmp.layers.FeedForward import FeedForward
 
@@ -46,12 +46,13 @@ class StackAttention(Layer):
                   activation_feed_hide: str = 'sigmoid',
                   dropout: float = 0,
                   rate: float = 0.5,
-                  n_dropout: int = 1) -> None:
+                  n_dropout: int = 1,
+                  **kwargs) -> None:
         if num_heads is None or dim_input is None: 
             raise ValueError("num_heads or dim has no value.")
         if key_dim is None: 
             raise ValueError("key_dim has no value.")
-        super(StackAttention,self).__init__()
+        super(StackAttention,self).__init__(**kwargs)
         self.__multihead = MultiHeadAttention(num_heads=num_heads,
                                               key_dim=key_dim,
                                               value_dim=value_dim,
@@ -69,7 +70,7 @@ class StackAttention(Layer):
         self.__layer_n_1 = LayerNormalization(epsilon=epsilon)
         self.__layer_n_2 = LayerNormalization(epsilon=epsilon)
     
-    @tf.function
+    @tf.autograph.experimental.do_not_convert
     def call(self, inputs_o: tf.TensorArray, inputs_att: tf.TensorArray, training=True):
         att = self.__multihead(inputs_o, inputs_att, inputs_att, training=training)
         add_1 = self.__add_1([inputs_att, att])
