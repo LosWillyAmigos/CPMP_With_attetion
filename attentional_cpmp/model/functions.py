@@ -9,12 +9,12 @@ from cpmp_ml.optimizer import OptimizerStrategy
 from cpmp_ml.optimizer import GreedyModel
 from cpmp_ml.utils.adapters import DataAdapter
 from cpmp_ml.validations import validate_model
-from keras.layers import Input
-from keras.layers import TimeDistributed
-from keras.layers import Flatten
-from keras.layers import Multiply
-from keras.models import Model
-from keras.utils import plot_model
+from keras.api.layers import Input
+from keras.api.layers import TimeDistributed
+from keras.api.layers import Reshape
+from keras.api.layers import Multiply
+from keras.api.models import Model
+from keras.api.utils import plot_model
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
@@ -69,7 +69,7 @@ def create_model(H: int,
                                             activation_feed=activation_feed,
                                             n_dropout_hide=n_dropout_hide,
                                             n_dropout_feed=n_dropout_feed))(concatenation)
-    unificate = Flatten()(distributed)
+    unificate = Reshape((-1,))(distributed)
     mult = Multiply()([unificate,expand])
     red = Reduction()(mult)
 
@@ -103,6 +103,8 @@ def load_cpmp_model(name: str) -> Model:
              'StackAttention' : StackAttention}
         model = tf.keras.models.load_model(name,custom_objects=c_o)
         
+        print('Modelo cargado con éxito!')
+
         return model
 
 def reinforcement_training(model: Model, S: int, H: int, N: int, validate_optimizer: OptimizerStrategy, adapter: DataAdapter,
