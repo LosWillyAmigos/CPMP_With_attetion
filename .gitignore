@@ -9,3 +9,4 @@ tests/
 data/
 hyperparameter_test/
 .env
+test.ipynb
