@@ -29,7 +29,7 @@ setup(
     dependency_links=[
         "git+https://github.com/rilianx/CPMP-ML.git@develop#egg=CPMP-ML"
     ],
-    python_requires=">=3.10,<3.12",
+    python_requires=">=3.11.9",
     packages=find_packages(
         include=("attentional_cpmp", "attentional_cpmp.*"),
         exclude=["models", "models.*"]
