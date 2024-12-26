@@ -48,8 +48,10 @@ class HyperparameterStudy:
       key_dim = trial.suggest_int('key_dim', 1, self.__max_key_dim)
 
       value_dim = trial.suggest_int('value_dim', 0, self.__max_value_dim)
-      if value_dim == 0:
-          value_dim = None
+      if value_dim != 0:
+          param_val = value_dim
+      else:
+          param_val = None
 
       dropout = trial.suggest_float('dropout', 0.0, 0.9)
       rate = trial.suggest_float('rate', 0.0, 0.9)
@@ -68,7 +70,7 @@ class HyperparameterStudy:
 
       model = create_model(H=self.__H,
                            key_dim=key_dim,
-                           value_dim=value_dim,
+                           value_dim=param_val,
                            num_heads=num_heads,
                            list_neurons_feed=list_neurons_feed,
                            list_neurons_hide=list_neurons_hide,
