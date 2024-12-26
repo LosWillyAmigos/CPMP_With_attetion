@@ -2,7 +2,7 @@ import json
 import numpy as np
 import uuid
 
-def save_data_json(States : list, Labels : list, name_file : str) -> bool:
+def save_data_json(States : np.array, Labels : np.array, name_file : str) -> bool:
     """
     Guarda un arreglo de matrices y un arreglo de arreglos en formato JSON.
 
@@ -26,7 +26,7 @@ def save_data_json(States : list, Labels : list, name_file : str) -> bool:
     return True
 
 def load_data_json(name_file:str) -> tuple:
-    with open(name_file + '.json', 'r') as archivo_json:
+    with open(name_file, 'r') as archivo_json:
         data = json.load(archivo_json)
 
     states = []
