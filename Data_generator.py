@@ -14,25 +14,64 @@ from attentional_cpmp.utils import save_data_mongo
 from attentional_cpmp.utils import save_data_json
 from attentional_cpmp.model import load_cpmp_model
 from keras.api.models import Model
+from urllib.parse import quote_plus
 from dotenv import load_dotenv
-import numpy as np
+from typing import Callable
 import getpass
 import sys
 
 SYSTEM = os.name
 
-def delete_terminal_lines(lines: int):
+def delete_terminal_lines(lines: int) -> None:
     for _ in range(lines):
         sys.stdout.write("\033[F")
         sys.stdout.write("\033[K")
 
-def clear_terminal():
+def clear_terminal() -> None:
     if SYSTEM == 'nt':
         os.system('cls')
     else:
         os.system('clear')
 
-def write_environment(db_host: str, db_user: str, db_password: str, db_name: str, model_route: str, json_data_route: str):
+def input_label(input_text: str, error_text: str, verify_input: Callable[[str], bool]) -> str:
+    input_jump_line_count = input_text.count('\n') + 1
+    error_jump_line_count = error_text.count('\n') + 1
+    second_error = False
+
+    while True:
+        text = input(input_text)
+        if verify_input(text):
+            break
+        
+        if not second_error: delete_terminal_lines(input_jump_line_count)
+        else: delete_terminal_lines(error_jump_line_count + input_jump_line_count)
+        print(error_text)
+        second_error = True
+
+    return text
+
+def input_password() -> str:
+    while True:
+        temp = getpass.getpass('Introduce tu contraseña: ')
+        temp_1 = getpass.getpass('Confirme tu contraseña: ')
+        
+        if temp != temp_1:
+            print('Las contraseñas no coinciden.')
+            input('Pulse Enter para continuar')
+            
+            delete_terminal_lines(4)
+            continue
+            
+        break
+
+    return temp
+
+def write_environment(db_host: str, 
+                      db_user: str, 
+                      db_password: str, 
+                      db_name: str, 
+                      model_route: str, 
+                      json_data_route: str) -> None:
     file = open('.env', 'w', encoding= 'utf-8')
 
     file.write(f'# Datos de conexión a la base de datos\n')
@@ -47,28 +86,21 @@ def write_environment(db_host: str, db_user: str, db_password: str, db_name: str
 
     file.close()
 
-def install_environment():
-    second_error = False
+def install_environment() -> tuple:
     db_host = ''
     db_user = ''
     db_password = ''
     db_name = ''
     model_route = os.getcwd().replace('\\', '/') + '/models/'
     json_data_route = os.getcwd().replace('\\', '/') + '/data/'
-    
+
     while True:
         clear_terminal()
-        while True:
-            opt = input('Usted usa MongoDB? (S/N) ').lower()
-            if opt in ['s', 'n']: 
-                second_error = False
-                break
-            
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque una opción válida.')
-            second_error = True
-            
+    
+        print('Bienvenido al instalador de CPMP_With_Attention\n')
+        opt = input_label('Usted usa MongoDB? (S/N) ', 
+                        'Por favor, coloque una opción válida.', 
+                        lambda x: x.lower() in ['s', 'n']).lower()
         if opt == 's':    
             db_host = input('Indique la IP del servidor mongodb (IP:Port): ')
             db_user = input('Indique su nombre de usuario: ')
@@ -77,44 +109,23 @@ def install_environment():
             db_uri = f'mongodb://{db_user}:{"*" * (len(db_password) + 1)}@{db_host}/?authSource={db_name}'
             
             print('MongoDB URI:', db_uri)
-            while True:
-                opt = input('Está seguro de los datos ingresados? (S/N) ')
-                if opt.lower() in ['s', 'n']:
-                    second_error = False
-                    break
-
-                if not second_error: delete_terminal_lines(1)
-                else: delete_terminal_lines(2)
-                print('Por favor, coloque una opción válida.')
-                second_error = True
+            opt = input_label('Está seguro de los datos ingresados? (S/N) ', 
+                            'Por favor, coloque una opción válida.', 
+                            lambda x: x.lower() in ['s', 'n']).lower()
 
             if opt.lower() == 'n': continue
         
         print(f'La ruta de los modelos será: {model_route}')
-        while True:
-            opt = input('Está seguro de la ruta de los modelos? (S/N) ').lower()
-            if opt in ['s', 'n']:
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque una opción válida.')
-            second_error = True
+        opt = input_label('Está seguro de la ruta de los modelos? (S/N) ', 
+                        'Por favor, coloque una opción válida.', 
+                        lambda x: x.lower() in ['s', 'n']).lower()
 
         if opt == 'n': model_route = input('Indique la ruta de los modelos: ')
         
         print(f'La ruta de los datos generados por JSON será: {json_data_route}')
-        while True:
-            opt = input('Está seguro de la ruta de los datos generados por JSON? (S/N) ').lower()
-            if opt.lower() in ['s', 'n']:
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque una opción válida.')
-            second_error = True
+        opt = input_label('Está seguro de la ruta de los datos generados por JSON? (S/N) ', 
+                        'Por favor, coloque una opción válida.', 
+                        lambda x: x.lower() in ['s', 'n']).lower()
         
         if opt == 'n': json_data_route = input('Indique la ruta de los datos generados por JSON: ')
 
@@ -122,12 +133,16 @@ def install_environment():
 
         return json_data_route, model_route
 
-def install_program():
-    json_route, model_route = install_environment()
-    if not os.path.exists(model_route): os.makedirs(model_route)
-    if not os.path.exists(json_route): os.makedirs(json_route)
+def install_data_route(route) -> None:
+    os.makedirs(f'{route}attentional/')
+    os.makedirs(f'{route}lineal/')
 
-if not os.path.exists('.env'): install_program()    
+def install_program() -> None:
+    json_route, model_route = install_environment()
+    if not os.path.exists(model_route): install_data_route(MODEL_ROUTE)
+    if not os.path.exists(json_route): install_data_route(JSON_DATA_ROUTE)
+
+if not os.path.exists('.env'): install_program()
 
 load_dotenv()
 
@@ -136,11 +151,11 @@ DB_USER = os.environ.get("DB_USER")
 DB_PASSWORD = os.environ.get("DB_PASSWORD")
 DB_NAME = os.environ.get("DB_NAME")
 
-MONGO_URI = f'mongodb://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/?authSource={DB_NAME}'
+MONGO_URI = f'mongodb://{quote_plus(DB_USER)}:{quote_plus(DB_PASSWORD)}@{DB_HOST}/?authSource={DB_NAME}'
 MODEL_ROUTE = os.environ.get("MODEL_ROUTE")
 JSON_DATA_ROUTE = os.environ.get("JSON_DATA_ROUTE")
 
-def try_again():
+def try_again() -> bool:
     act = input('Quiere volver a intentar? (S / N) ').lower()
 
     delete_terminal_lines(1)
@@ -148,7 +163,7 @@ def try_again():
     if act == 's': return True
     return False
 
-def dis_menu_gen1():
+def dis_menu_gen1() -> None:
     print('|*|*************| Generador V1 |*************|*|')
     print('|*| Los datos que entregará este generador   |*|')
     print('|*| será el estado inicial de un problema    |*|')
@@ -156,7 +171,7 @@ def dis_menu_gen1():
     print('|*|**********| CPMP_With_Attention |*********|*|')
     print('')
 
-def dis_menu_gen2():
+def dis_menu_gen2() -> None:
     print('|*|*************| Generador V2 |*************|*|')
     print('|*| Los datos que entregará este generador   |*|')
     print('|*| serán todos los pasos para resolver un   |*|')
@@ -168,7 +183,7 @@ def dis_menu_gen2():
     print('|*|**********| CPMP_With_Attention |*********|*|')
     print('')
 
-def dis_menu_gen3():
+def dis_menu_gen3() -> None:
     print('|*|*************| Generador V3 |*************|*|')
     print('|*| Los datos que entregará este generador   |*|')
     print('|*| será el estado incial de un problema     |*|')
@@ -178,28 +193,28 @@ def dis_menu_gen3():
     print('|*|**********| CPMP_With_Attention |*********|*|')
     print('') 
 
-def dis_menu_change_model_route():
+def dis_menu_change_model_route() -> None:
     print('|*|*************| Ruta de los modelos |*************|*|')
     print('|*| Este menú le dará apoyo para cambiar la ruta    |*|')
     print('|*| donde se encuentran los modelos.                |*|')
     print('|*|*************| CPMP_With_Attention |*************|*|')
     print('')
 
-def dis_menu_change_mongodb_uri():
+def dis_menu_change_mongodb_uri() -> None:
     print('|*|*************| URI de MongoDB |***************|*|')
     print('|*| Este menú le dará apoyo para cambiar la URI  |*|')
     print('|*| de conexión a MongoDB.                       |*|')
     print('|*|***********| CPMP_With_Attention |************|*|')
     print('')
 
-def dis_menu_change_data_route():
+def dis_menu_change_data_route() -> None:
     print('|*|**************| Ruta de los datos |**************|*|')
     print('|*| Este menú le dará apoyo para cambiar la ruta    |*|')
     print('|*| donde se encuentran los datos generados.        |*|')
     print('|*|*************| CPMP_With_Attention |*************|*|')
     print('')
 
-def dis_save_data_json():
+def dis_save_data_json() -> None:
     print('|*|*************| JSON |**************|*|')
     print('|*| Este menú le dará apoyo para      |*|')
     print('|*| almacenar los datos generados en  |*|')
@@ -208,7 +223,7 @@ def dis_save_data_json():
     print('|*|******| CPMP_With_Attention |******|*|')
     print('')
 
-def dis_save_data_mongodb():
+def dis_save_data_mongodb() -> None:
     print('|*|*************| MongoDB |*************|*|')
     print('|*| Este menú le dará apoyo para        |*|')
     print('|*| almacenar los datos generados en    |*|')
@@ -216,14 +231,14 @@ def dis_save_data_mongodb():
     print('|*|*******| CPMP_With_Attention |*******|*|')
     print('')
 
-def dis_select_model():
+def dis_select_model() -> None:
     print('|*|***************| Selección de modelo |***************|*|')
     print('|*| Este menú le dará apoyo para seleccionar el modelo  |*|')
     print('|*| que desea utilizar para la generación de datos.     |*|')
     print('|*|***************| CPMP_With_Attention |***************|*|')
     print('')
 
-def dis_save_data():
+def dis_save_data() -> None:
     print('|*|*************| Guardado de datos |*************|*|')
     print('|*| Como desea almacenar sus datos?               |*|')
     print('|*| 1) Formato JSON                               |*|')
@@ -231,7 +246,7 @@ def dis_save_data():
     print('|*|************| CPMP_With_Attention |************|*|')
     print('')
 
-def dis_option_menu():
+def dis_option_menu() -> None:
     print('|*|**************| Opciones |****************|*|')
     print('|*| 1) Cambiar la ruta de los modelos        |*|')
     print('|*| 2) Cambiar la URI de MongoDB             |*|')
@@ -240,7 +255,7 @@ def dis_option_menu():
     print('|*|*********| CPMP_With_Attention |**********|*|')
     print('')
 
-def dis_main_menu():
+def dis_main_menu() -> None:
     print('|*|*************| Menú del generador |*************|*|')
     print('|*|  1) Generar datos V1                           |*|')
     print('|*|  2) Generar datos V2 (Solo para Atención)      |*|')
@@ -250,57 +265,134 @@ def dis_main_menu():
     print('|*|************| CPMP_With_Attention |*************|*|')
     print('')
 
-def change_mongodb_uri():
+def change_uri_mongo_menu() -> None:
+    global MONGO_URI
     global DB_HOST
     global DB_USER
     global DB_PASSWORD
     global DB_NAME
-    global MONGO_URI
-    
-    clear_terminal()
-    dis_menu_change_mongodb_uri()
 
-    DB_HOST = input('Indique la IP del servidor mongodb (IP:Port) : ')
-    DB_USER = input('Indique su nombre de usuario: ')
-    DB_PASSWORD = getpass.getpass('Introduce tu contraseña: ')
-    DB_NAME = input('Ingrese el nombre de la base de datos de autenticación: ')
+    while True:
+        clear_terminal()
+        dis_menu_change_mongodb_uri()
 
-    MONGO_URI = f'mongodb://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/?authSource={DB_NAME}'
-    print('Datos cambiados con éxito!')
+        print(f'Actual datos de MongoDB:')
+        print(f'1) HOST: {DB_HOST}')
+        print(f'2) USER: {DB_USER}')
+        print(f"3) PASSWORD: {'*' * len(DB_PASSWORD)}")
+        print(f'4) AUTENTICATION DATABASE: {DB_NAME}\n')
 
-def save_data_mongo_menu(data: list, labels: list):
+        act = input_label('Desea cambiar los datos de MongoDB? (S / N) ', 
+                          'Por favor, coloque una opción válida.', 
+                          lambda x: x.lower() in ['s', 'n']).lower()
+        
+        if act == 'n': break
+
+        opt = int(input_label('Que dato desea cambiar? (1 - 4) ', 
+                          'Por favor, coloque un número entero.', 
+                          lambda x: x.isdigit() and 0 < int(x) <= 4))
+        
+        if opt == 1:
+            DB_HOST = input('Indique la IP del servidor mongodb (IP:Port): ')
+        elif opt == 2:
+            DB_USER = input('Indique su nombre de usuario: ')
+        elif opt == 3:
+            DB_PASSWORD = input_password()
+        elif opt == 4:
+            DB_NAME = input('Ingrese el nombre de la base de datos de autenticación: ')
+
+        MONGO_URI = f'mongodb://{quote_plus(DB_USER)}:{quote_plus(DB_PASSWORD)}@{DB_HOST}/?authSource={DB_NAME}'
+        print('Datos cambiados con éxito!')
+
+        act = input_label('Desea cambiar otro dato? (S / N) ', 
+                          'Por favor, coloque una opción válida.', 
+                          lambda x: x.lower() in ['s', 'n']).lower()
+        
+        if act == 'n': break
+
+def change_data_route_menu() -> None:
+    global JSON_DATA_ROUTE
+
+    while True:
+        clear_terminal()
+        dis_menu_change_data_route()
+
+        print(f'Actual ruta de los datos: {JSON_DATA_ROUTE}\n')
+
+        data_route = input('Indique la nueva ruta de los datos (puede ser la misma): ')
+        if not os.path.exists(data_route): print('La ruta no existe.')
+        else: print('Ruta ya existe.')
+
+        act = input_label('Está seguro de la nueva ruta de los datos? (S / N) ', 
+                          'Por favor, coloque una opción válida.', 
+                          lambda x: x.lower() in ['s', 'n']).lower()
+
+        if act == 's': 
+            install_data_route(data_route)
+            print('Ruta creada con éxito!')
+        else: 
+            print('Ruta no creada.')
+            input('Pulse Enter para continuar')
+            if try_again(): continue
+        
+        break
+
+    input('Pulse Enter para continuar')
+    JSON_DATA_ROUTE = data_route
+
+def change_model_route_menu() -> None:
+    global MODEL_ROUTE
+
+    while True:
+        clear_terminal()
+        dis_menu_change_model_route()
+
+        print(f'Actual ruta de los modelos: {MODEL_ROUTE}\n')
+        
+        model_route = input('Indique la nueva ruta de los modelos (puede ser la misma): ').replace('\\', '/')
+        if not model_route.endswith('/'): model_route += '/'
+        if not os.path.exists(model_route): print('La ruta no existe.')
+        else: print('Ruta ya existe.')
+
+        act = input_label('Está seguro de la nueva ruta de los modelos? (S / N) ', 
+                          'Por favor, coloque una opción válida.', 
+                          lambda x: x.lower() in ['s', 'n']).lower()
+
+        if act == 's': 
+            install_data_route(model_route)
+            print('Ruta creada con éxito!')
+            break
+        else: 
+            print('Ruta no creada.')
+            if try_again(): continue
+            break
+    input('Pulse Enter para continuar')
+    MODEL_ROUTE = model_route
+
+def save_data_mongo_menu(data: list, labels: list) -> bool:
     while True:
         clear_terminal()
         dis_save_data_mongodb()
-        second_error = False
 
         client = connect_to_server(MONGO_URI)
         if client is None and try_again():
-            change_mongodb_uri()
-            clear_terminal()
-            continue
+            print('La conexión no se pudo realizar.')
+            opt = input_label('Desea cambiar la URI de MongoDB? (S / N) ',
+                                'Por favor, coloque una opción válida.', 
+                                lambda x: x.lower() in ['s', 'n']).lower()
+            if opt == 's': 
+                change_uri_mongo_menu()
+                continue
 
-        while True:
-            data_base_name = input('Indique el nombre de la base de datos: ')
-            if data_base_name in client.list_database_names(): 
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('La base de datos no existe.')
-            second_error = True
+            return False
         
-        while True:
-            collection_name = input('Indique el nombre de la colección: ')
-            if collection_name in client[data_base_name].list_collection_names(): 
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('La colección no existe.')
-            second_error = True
+        data_base_name = input_label('Indique el nombre de la base de datos: ', 
+                                     'Por favor, coloque un nombre válido.', 
+                                     lambda x: x in client.list_database_names())
+        
+        collection_name = input_label('Indique el nombre de la colección: ', 
+                                      'La colección no existe.', 
+                                      lambda x: x in client[data_base_name].list_collection_names())
 
         data_base = client[data_base_name]
 
@@ -319,31 +411,36 @@ def save_data_mongo_menu(data: list, labels: list):
 
         return True
 
-def save_data_json_menu(data: list, labels: list):
+def save_data_json_menu(data: list, labels: list) -> bool:
     while True:
         clear_terminal()
         dis_save_data_json()
-        second_error = False
- 
+
+        if not os.path.exists(JSON_DATA_ROUTE):
+            print('La ruta de los datos no existe.')
+            opt = input_label('Desea cambiar la ruta? (S / N) ', 
+                              'Por favor, coloque una opción válida.', 
+                              lambda x: x.lower() in ['s', 'n']).lower()
+            if opt == 's': 
+                change_data_route_menu()
+                continue
+
+            input('Pulse Enter para continuar')
+            
+            return False
+
         file_name = input('Indique el nombre del archivo: ')
-        if not os.path.exists(JSON_DATA_ROUTE + file_name + '.json'): 
+        if os.path.exists(JSON_DATA_ROUTE + file_name + '.json'): 
             print('El archivo ya existe.')
             print('Si continua, el archivo será sobreescrito.')
-            while True:   
-                option = input('Desea continuar? (S / N) ').lower()
-                if option in ['s', 'n']: 
-                    second_error = False
-                    break
 
-                if not second_error: delete_terminal_lines(1)
-                else: delete_terminal_lines(2)
-                print('Por favor, coloque una opción válida.')
-                second_error = True
+            option = input_label('Desea continuar? (S / N) ', 
+                                 'Por favor, coloque una opción válida.', 
+                                 lambda x: x.lower() in ['s', 'n']).lower()
             
             if option == 'n': return False
 
-        print('Iniciando Guardado...')
-        
+        print('\nIniciando Guardado...')
         try: 
             save_data_json(data, labels, JSON_DATA_ROUTE + file_name)
         except Exception as e:
@@ -354,10 +451,9 @@ def save_data_json_menu(data: list, labels: list):
             return False
 
         print('Datos guardados con éxito!')
-
         return True
 
-def save_data_menu(data: list, labels: list):
+def save_data_menu(data: list, labels: list) -> None:
     while True:
         clear_terminal()
         dis_save_data()
@@ -375,7 +471,8 @@ def save_data_menu(data: list, labels: list):
             if not save_data_json_menu(data, labels) and try_again(): continue
         if option == 2:
             if not save_data_mongo_menu(data, labels) and try_again(): continue
-        
+
+        input('Pulse Enter para continuar')
         break
 
 def get_models(route: str) -> dict:
@@ -395,155 +492,88 @@ def select_model(S: int, H: int, adapter: str) -> Model:
     while True:
         clear_terminal()
         dis_select_model()
-        second_error = False
+        
+        if not os.path.exists(MODEL_ROUTE):
+            print('La ruta de los modelos no existe.')
+            opt = input_label('Desea cambiar la ruta de los modelos? (S / N) ', 
+                              'Por favor, coloque una opción válida.', 
+                              lambda x: x.lower() in ['s', 'n']).lower()
+            if opt == 's': 
+                change_model_route_menu()
+                continue
 
-        if adapter == 'attentionmodel': models = get_models(f'{MODEL_ROUTE}attentional/Sx{H}/')
-        if adapter == 'linealmodel': models = get_models(f'{MODEL_ROUTE}lineal/{S}x{H}/')
+            return None
+
+        if adapter == 'attentionmodel' and os.path.exists(f'{MODEL_ROUTE}attentional/Sx{H}/'): models = get_models(f'{MODEL_ROUTE}attentional/Sx{H}/')
+        elif adapter == 'attentionmodel' and not os.path.exists(f'{MODEL_ROUTE}attentional/Sx{H}/'): 
+            os.mkdir(f'{MODEL_ROUTE}attentional/Sx{H}/')
+            models = get_models(f'{MODEL_ROUTE}attentional/Sx{H}/')
+
+        if adapter == 'linealmodel' and os.path.exists(f'{MODEL_ROUTE}lineal/{S}x{H}/'): models = get_models(f'{MODEL_ROUTE}lineal/{S}x{H}/')
+        elif adapter == 'linealmodel' and not os.path.exists(f'{MODEL_ROUTE}lineal/{S}x{H}/'): 
+            os.mkdir(f'{MODEL_ROUTE}lineal/{S}x{H}/')
+            models = get_models(f'{MODEL_ROUTE}lineal/{S}x{H}/')
 
         if models is None: 
             if adapter == 'attentionmodel': print(f'No hay modelos para seleccionar con altura {H}.')
             if adapter == 'linealmodel': print(f'No hay modelos para seleccionar con altura {H} y {S} stacks.')
             return None
 
-        while True:
-            num_model = input('Seleccione el modelo que desea utilizar: ')
-            if num_model.isdigit() and 0 < int(num_model) <= len(models) + 1: 
-                num_model = int(num_model)
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero válido.')
-            second_error = True
+        num_model = int(input_label('Seleccione el modelo que desea utilizar: ', 
+                                'Por favor, coloque un número entero.', 
+                                lambda x: x.isdigit() and 0 < int(x) <= len(models) + 1))
 
         if adapter == 'attentionmodel': model = load_cpmp_model(f'{MODEL_ROUTE}attentional/Sx{H}/{models[num_model]}')
         if adapter == 'linealmodel': model = load_cpmp_model(f'{MODEL_ROUTE}lineal{S}x{H}/{models[num_model]}')
 
         return model
+    
 
-def generate_v1_menu():
+def generate_v1_menu() -> None:
     while True:
         clear_terminal()
         dis_menu_gen1()
-        second_error = False
 
-        while True:
-            S = input('Cuantos stacks contiene el problema? (S ≥ 1) ')
-            if S.isdigit() and int(S) >= 1: 
-                S = int(S)
-                second_error = False
-                break
-    
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero.')
-            second_error = True
+        S = int(input_label('Cuantos stacks contiene el problema? (S ≥ 1) ', 
+                            'Por favor, coloque un número entero.', 
+                            lambda x: x.isdigit() and int(x) >= 1))
 
-        while True:
-            H = input('De que altura es el problema? (H ≥ 3) ')
-            if H.isdigit() and int(H) >= 3:
-                H = int(H)
-                second_error = False 
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero.')
-            second_error = True
+        H = int(input_label('De que altura es el problema? (H ≥ 3) ', 
+                            'Por favor, coloque un número entero.', 
+                            lambda x: x.isdigit() and int(x) >= 3))
 
         max_N = S * (H - 2)
-        while True:
-            N = input(f'Cuantos contenedores posee el problema? (N ≥ 1 y N ≤ {max_N}) ')
-            if N.isdigit() and int(N) <= max_N and int(N) >= 1: 
-                N = int(N)
-                second_error = False
-                break
+        N = int(input_label(f'Cuantos contenedores posee el problema? (N ≥ 1 y N ≤ {max_N}) ', 
+                            f'Por favor, coloque un número entero o menor a {max_N} y mayor a 1.', 
+                            lambda x: x.isdigit() and int(x) <= max_N and int(x) >= 1))
 
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print(f'Por favor, coloque un número entero o menor a {max_N} y mayor a 1.')
-            second_error = True
-
-        while True:
-            max_steps = input('En cuantos pasos como máximo se debe resolver el problema? (n ≥ 1) ')
-            if max_steps.isdigit() and int(max_steps) >= 1: 
-                max_steps = int(max_steps)
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero mayor a 1.')
-            second_error = True
+        max_steps = int(input_label('En cuantos pasos como máximo se debe resolver el problema? (n ≥ 1) ', 
+                                    'Por favor, coloque un número entero mayor a 1.', 
+                                    lambda x: x.isdigit() and int(x) >= 1))
         
-        while True:    
-            perms_by_layout = input('Cuantas permutaciones necesita? (n ≥ 1) ')
-            if perms_by_layout.isdigit() and int(perms_by_layout) >= 1: 
-                perms_by_layout = int(perms_by_layout)
-                second_error = False
-                break
-            
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero mayor a 1.')
-            second_error = True
+        perms_by_layout = int(input_label('Cuantas permutaciones necesita? (n ≥ 1) ', 
+                                         'Por favor, coloque un número entero mayor a 1.', 
+                                         lambda x: x.isdigit() and int(x) >= 1))
         
-        while True:
-            sample_size = input('Cuantos datos necesita en total? (n ≥ 1) ')
-            if sample_size.isdigit() and int(sample_size) >= 1: 
-                sample_size = int(sample_size)
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero mayor a 1.')
-            second_error = True
+        sample_size = int(input_label('Cuantos datos necesita en total? (n ≥ 1) ', 
+                                     'Por favor, coloque un número entero mayor a 1.', 
+                                     lambda x: x.isdigit() and int(x) >= 1))
         
-        while True: 
-            optimizer = input('Que optimizador necesitas? (GreedyV1, GreedyV2, GreedyModel) ').lower()
-            if optimizer in ['greedyv1', 'greedyv2', 'greedymodel']: 
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)   
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un optimizador válido.')
-            second_error = True
+        optimizer = input_label('Que optimizador necesitas? (GreedyV1, GreedyV2, GreedyModel) ', 
+                                'Por favor, coloque un optimizador válido.', 
+                                lambda x: x.lower() in ['greedyv1', 'greedyv2', 'greedymodel']).lower()
         
-        while True:
-            adapter_selected = input('Que adaptador necesitas? (AttentionModel, LinealModel) ').lower()
-            if adapter_selected in ['attentionmodel', 'linealmodel']: 
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un adaptador válido.')
-            second_error = True
+        adapter_selected = input_label('Que adaptador necesitas? (AttentionModel, LinealModel) ', 
+                                      'Por favor, coloque un adaptador válido.', 
+                                      lambda x: x.lower() in ['attentionmodel', 'linealmodel']).lower()
         
-        while True:
-            verbose = input('Desea ver la cantidad de datos generados durante la ejecución? (S / N) ').lower()
-            if verbose in ['s', 'n']: 
-                second_error = False
-                break
-            
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque una opción válida.')
-            second_error = True
+        verbose = input_label('Desea ver la cantidad de datos generados durante la ejecución? (S / N) ', 
+                             'Por favor, coloque una opción válida.', 
+                             lambda x: x.lower() in ['s', 'n']).lower()
         
-        while True:
-            act = input('Está seguro de sus elecciones? (S / N) ').lower()
-            if act in ['s', 'n']: 
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque una opción válida.')
-            second_error = True
+        act = input_label('Está seguro de sus elecciones? (S / N) ', 
+                         'Por favor, coloque una opción válida.', 
+                         lambda x: x.lower() in ['s', 'n']).lower()
 
         if act == 'n':
             clear_terminal()
@@ -565,8 +595,7 @@ def generate_v1_menu():
         if verbose == 's': verbose = True
         elif verbose == 'n': verbose = False
 
-        print('La generación de datos comienza!\n')
-
+        print('\nLa generación de datos comienza!')
         data, labels = generate_data_v1(S, H, N, sample_size, verbose= verbose, perms_by_layout= perms_by_layout, 
                                         solver= optimizer, adapter= adapter, max_steps= max_steps)
         
@@ -584,118 +613,52 @@ def generate_v1_menu():
             break
         else: continue
 
-def generate_v2_menu():
+def generate_v2_menu() -> None:
     while True:
         clear_terminal()
         dis_menu_gen2()
-        second_error = False
         adapter = AttentionModel()
 
-        while True:
-            min_S = input('Cuantos stacks por lo mínimo contiene el problema? (S ≥ 1) ')
-            if min_S.isdigit() and int(min_S) >= 1: 
-                min_S = int(min_S)
-                second_error = False
-                break
-    
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero mayor a 1.')
-            second_error = True
+        min_S = int(input_label('Cuantos stacks por lo mínimo contiene el problema? (S ≥ 1) ', 
+                                'Por favor, coloque un número entero mayor a 1.', 
+                                lambda x: x.isdigit() and int(x) >= 1))
+
+        max_S = int(input_label(f'Cuantos stacks en máximo contiene el problema? (S ≥ {min_S}) ', 
+                                f'Por favor, coloque un número entero mayor a {min_S}.', 
+                                lambda x: x.isdigit() and int(x) >= 1))
         
-        while True:
-            max_S = input(f'Cuantos stacks en máximo contiene el problema? (S ≥ {min_S}) ')
-            if max_S.isdigit() and int(max_S) >= 1: 
-                max_S = int(max_S)
-                second_error = False
-                break
-    
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print(f'Por favor, coloque un número entero mayor a {min_S}.')
-            second_error = True
-
-        while True:
-            H = input('De que altura es el problema? (H ≥ 3) ')
-            if H.isdigit():
-                H = int(H)
-                second_error = False 
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero.')
-            second_error = True
-
-        while True:
-            lb = input('Cual es el porcentaje mínimo de pasos que desea? (0 < lb ≤ 1) ').replace(',', '.')
-            if lb.replace('.', '').isdigit() and 0 < float(lb) <= 1:
-                lb = 1 - float(lb)
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número decimal mayor a 0 y menor o igual a 1.')
-            second_error = True
-
-        while True:
-            sample_size = input('Cuantos datos necesita en total? (n ≥ 1) ')
-            if sample_size.isdigit() and int(sample_size) >= 1: 
-                sample_size = int(sample_size)
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero mayor a 1.')
-            second_error = True
-
-        while True:
-            batch_size = input('Cuantos datos desea generar por lote? (n ≥ 1 y el predeterminado 32) ')
-            if batch_size.isdigit() and int(batch_size) >= 1:
-                batch_size = int(batch_size)
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero mayor a 1.')
-            second_error = True
-
-        while True:
-            optimizer = input('Que optimizador necesitas? (GreedyV1, GreedyV2, GreedyModel) ').lower()
-            if optimizer in ['greedyv1', 'greedyv2', 'greedymodel']:
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un optimizador válido.')
-            second_error = True
+        H = int(input_label('De que altura es el problema? (H ≥ 3) ', 
+                            'Por favor, coloque un número entero.', 
+                            lambda x: x.isdigit() and int(x) >= 3))
         
-        while True:
-            verbose = input('Desea ver la cantidad de datos generados durante la ejecución? (S / N) ').lower()
-            if verbose in ['s', 'n']: 
-                second_error = False
-                break
-            
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque una opción válida.')
-            second_error = True
+        lb = 1 - float(input_label('Cual es el porcentaje mínimo de pasos que desea? (0 < n ≤ 1) ', 
+                                   'Por favor, coloque un número decimal mayor a 0 y menor o igual a 1.', 
+                                   lambda x: x.replace('.', '').isdigit() and 0 < float(x) <= 1))
         
-        while True:
-            act = input('Está seguro de sus elecciones? (S / N) ').lower()
-            if act in ['s', 'n']: 
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque una opción válida.')
-            second_error = True
-
+        sample_size = int(input_label('Cuantos datos necesita en total? (n ≥ 1) ', 
+                                     'Por favor, coloque un número entero mayor a 1.', 
+                                     lambda x: x.isdigit() and int(x) >= 1))
+        
+        batch_size = int(input_label('Cuantos datos desea generar por lote? (n ≥ 1 y el predeterminado 32) ', 
+                                    'Por favor, coloque un número entero mayor a 1.', 
+                                    lambda x: x.isdigit() and int(x) >= 1))
+        
+        num_threads = int(input_label(f'Cuantos hilos desea utilizar? (n ≥ 1 y n ≤ {os.cpu_count()}) ', 
+                                    f'Por favor, coloque un número entero mayor a 1.', 
+                                    lambda x: x.isdigit() and int(x) >= 1 and int(x) <= os.cpu_count()))
+        
+        optimizer = input_label('Que optimizador necesitas? (GreedyV1, GreedyV2, GreedyModel) ', 
+                                'Por favor, coloque un optimizador válido.', 
+                                lambda x: x.lower() in ['greedyv1', 'greedyv2', 'greedymodel']).lower()
+        
+        verbose = input_label('Desea ver la cantidad de datos generados durante la ejecución? (S / N) ', 
+                             'Por favor, coloque una opción válida.', 
+                             lambda x: x.lower() in ['s', 'n']).lower()
+        
+        act = input_label('Está seguro de sus elecciones? (S / N) ', 
+                         'Por favor, coloque una opción válida.', 
+                         lambda x: x.lower() in ['s', 'n']).lower() 
+        
         if act == 'n':
             clear_terminal()
             return
@@ -713,11 +676,10 @@ def generate_v2_menu():
         if verbose == 's': verbose = True
         elif verbose == 'n': verbose = False
 
-        print('La generación de datos comienza!\n')
-
-        input('Presione Enter para continuar...')
+        print('\nLa generación de datos comienza!')
         data, labels = generate_data_v2(min_S, max_S, H, size= sample_size, lb= lb, verbose= verbose, 
-                                        optimizer= optimizer, adapter= adapter, batch_size= batch_size)
+                                        optimizer= optimizer, adapter= adapter, batch_size= batch_size, 
+                                        num_threads= num_threads)
         
         print('Datos generados con éxito!')
         act = input('Desea guardar los datos generados? (S / N) ').lower()
@@ -733,140 +695,55 @@ def generate_v2_menu():
             break
         else: continue
 
-def generate_v3_menu():
+def generate_v3_menu() -> None:
     while True:
         clear_terminal()
         dis_menu_gen3()
-        second_error = False
 
-        while True:
-            S = input('Cuantos stacks contiene el problema? (S ≥ 1) ')
-            if S.isdigit() and int(S) >= 1: 
-                S = int(S)
-                second_error = False
-                break
-    
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero.')
-            second_error = True
-
-        while True:
-            H = input('De que altura es el problema? (H ≥ 3) ')
-            if H.isdigit() and int(H) >= 3:
-                H = int(H)
-                second_error = False 
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero.')
-            second_error = True
-
+        S = int(input_label('Cuantos stacks contiene el problema? (S ≥ 1) ', 
+                            'Por favor, coloque un número entero.', 
+                            lambda x: x.isdigit() and int(x) >= 1))
+        
+        H = int(input_label('De que altura es el problema? (H ≥ 3) ', 
+                            'Por favor, coloque un número entero.', 
+                            lambda x: x.isdigit() and int(x) >= 3))
+        
         max_N = S * (H - 2)
-        while True:
-            N = input(f'Cuantos contenedores posee el problema? (N ≥ 1 y N ≤ {max_N}) ')
-            if N.isdigit() and int(N) <= max_N and int(N) >= 1: 
-                N = int(N)
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print(f'Por favor, coloque un número entero o menor a {max_N} y mayor a 1.')
-            second_error = True
-
-        while True:
-            max_steps = input('En cuantos pasos como máximo se debe resolver el problema? (n ≥ 1) ')
-            if max_steps.isdigit() and int(max_steps) >= 1: 
-                max_steps = int(max_steps)
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero mayor a 1.')
-            second_error = True
+        N = int(input_label(f'Cuantos contenedores posee el problema? (N ≥ 1 y N ≤ {max_N}) ', 
+                            f'Por favor, coloque un número entero o menor a {max_N} y mayor a 1.', 
+                            lambda x: x.isdigit() and int(x) <= max_N and int(x) >= 1))
         
-        while True:    
-            perms_by_layout = input('Cuantas permutaciones necesita? (n ≥ 1) ')
-            if perms_by_layout.isdigit() and int(perms_by_layout) >= 1: 
-                perms_by_layout = int(perms_by_layout)
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero mayor a 1.')
-            second_error = True
+        max_steps = int(input_label('En cuantos pasos como máximo se debe resolver el problema? (n ≥ 1) ', 
+                                    'Por favor, coloque un número entero mayor a 1.', 
+                                    lambda x: x.isdigit() and int(x) >= 1))
         
-        while True:
-            sample_size = input('Cuantos datos necesita en total? (n ≥ 1) ')
-            if sample_size.isdigit() and int(sample_size) >= 1: 
-                sample_size = int(sample_size)
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero mayor a 1.')
-            second_error = True
-
-        while True:
-            bath_size = input('Cuantos datos desea generar por lote? (n ≥ 1 y el predeterminado 32) ')
-            if bath_size.isdigit() and int(bath_size) >= 1:
-                bath_size = int(bath_size)
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero mayor a 1.')
-            second_error = True
+        perms_by_layout = int(input_label('Cuantas permutaciones necesita? (n ≥ 1) ', 
+                                         'Por favor, coloque un número entero mayor a 1.', 
+                                         lambda x: x.isdigit() and int(x) >= 1))
         
-        while True:
-            optimizer = input('Que optimizador necesitas? (GreedyV1, GreedyV2, GreedyModel) ').lower()
-            if optimizer in ['greedyv1', 'greedyv2', 'greedymodel']: 
-                second_error = False
-                break
+        sample_size = int(input_label('Cuantos datos necesita en total? (n ≥ 1) ', 
+                                     'Por favor, coloque un número entero mayor a 1.', 
+                                     lambda x: x.isdigit() and int(x) >= 1))
 
-            if not second_error: delete_terminal_lines(1)   
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un optimizador válido.')
-            second_error = True
+        bath_size = int(input_label('Cuantos datos desea generar por lote? (n ≥ 1 y el predeterminado 32) ', 
+                                  'Por favor, coloque un número entero mayor a 1.', 
+                                  lambda x: x.isdigit() and int(x) >= 1))
         
-        while True:
-            selected_adapter = input('Que adaptador necesitas? (AttentionModel, LinealModel) ').lower()
-            if selected_adapter in ['attentionmodel', 'linealmodel']: 
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un adaptador válido.')
-            second_error = True
+        optimizer = input_label('Que optimizador necesitas? (GreedyV1, GreedyV2, GreedyModel) ', 
+                                'Por favor, coloque un optimizador válido.', 
+                                lambda x: x.lower() in ['greedyv1', 'greedyv2', 'greedymodel']).lower()
         
-        while True:
-            verbose = input('Desea ver la cantidad de datos generados durante la ejecución? (S / N) ').lower()
-            if verbose in ['s', 'n']:
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque una opción válida.')
-            second_error = True
+        selected_adapter = input_label('Que adaptador necesitas? (AttentionModel, LinealModel) ', 
+                                      'Por favor, coloque un adaptador válido.', 
+                                      lambda x: x.lower() in ['attentionmodel', 'linealmodel']).lower()
         
-        while True:
-            act = input('Está seguro de sus elecciones? (S / N) ').lower()
-            if act in ['s', 'n']: 
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque una opción válida.')
-            second_error = True
+        verbose = input_label('Desea ver la cantidad de datos generados durante la ejecución? (S / N) ', 
+                             'Por favor, coloque una opción válida.', 
+                             lambda x: x.lower() in ['s', 'n']).lower()
+        
+        act = input_label('Está seguro de sus elecciones? (S / N) ', 
+                         'Por favor, coloque una opción válida.', 
+                         lambda x: x.lower() in ['s', 'n']).lower()
 
         if act == 'n':
             clear_terminal()
@@ -909,176 +786,7 @@ def generate_v3_menu():
             break
         else: continue
 
-def change_model_route_menu():
-    global MODEL_ROUTE
-
-    while True:
-        clear_terminal()
-        dis_menu_change_model_route()
-        second_error = False
-
-        print(f'Actual ruta de los modelos: {MODEL_ROUTE}\n')
-
-        model_route = input('Indique la nueva ruta de los modelos: ')
-        if not os.path.exists(model_route): 
-            print('La ruta no existe.')
-            while True:
-                act = input('Desea crear la ruta? (S / N) ').lower()
-                if act in ['s', 'n']: 
-                    second_error = False
-                    break
-
-                if not second_error: delete_terminal_lines(1)
-                else: delete_terminal_lines(2)
-                print('Por favor, coloque una opción válida.')
-                second_error = True
-
-            while True:
-                act = input('Está seguro de la nueva ruta de los modelos? (S / N) ').lower()
-                if act in ['s', 'n']: 
-                    second_error = False
-                    break
-
-                if not second_error: delete_terminal_lines(1)
-                else: delete_terminal_lines(2)
-                print('Por favor, coloque una opción válida.')
-                second_error = True
-
-            if act == 's': 
-                os.makedirs(model_route)
-                print('Ruta creada con éxito!')
-                break
-            else: 
-                print('Ruta no creada.')
-                if try_again(): continue
-                break
-    input('Pulse Enter para continuar')
-    MODEL_ROUTE = model_route
-
-def change_uri_mongo_menu():
-    global MONGO_URI
-    global DB_HOST
-    global DB_USER
-    global DB_PASSWORD
-    global DB_NAME
-
-    while True:
-        clear_terminal()
-        dis_menu_change_mongodb_uri()
-        second_error = False
-
-        print(f'Actual datos de MongoDB:')
-        print(f'1) HOST: {DB_HOST}')
-        print(f'2) USER: {DB_USER}')
-        print(f'3) PASSWORD: {DB_PASSWORD}\n')
-        print(f'4) AUTENTICATION DATABASE: {DB_NAME}\n')
-
-        while True:
-            act = input('Desea cambiar los datos de MongoDB? (S / N) ').lower()
-            if act in ['s', 'n']: 
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque una opción válida.')
-            second_error = True
-        
-        if act == 'n': break
-
-        while True:
-            opt = input('Que dato desea cambiar? (1 - 4) ')
-            if opt.isdigit() and 0 < int(opt) <= 4:
-                opt = int(opt)
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque un número entero válido.')
-            second_error = True
-        
-        if opt == 1:
-            DB_HOST = input('Indique la IP del servidor mongodb (IP:Port): ')
-        elif opt == 2:
-            DB_USER = input('Indique su nombre de usuario: ')
-        elif opt == 3:
-            while True:
-                temp = getpass.getpass('Introduce tu contraseña: ')
-                temp_1 = getpass.getpass('Confirme tu contraseña: ')
-                
-                if temp != temp_1:
-                    print('Las contraseñas no coinciden.')
-                    input('Pulse Enter para continuar')
-                    
-                    delete_terminal_lines(4)
-                    continue
-
-                DB_PASSWORD = temp
-        elif opt == 4:
-            DB_NAME = input('Ingrese el nombre de la base de datos de autenticación: ')
-
-        MONGO_URI = f'mongodb://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/?authSource={DB_NAME}'
-        print('Datos cambiados con éxito!')
-
-        while True:
-            act = input('Desea cambiar otro dato? (S / N) ').lower()
-            if act in ['s', 'n']: 
-                second_error = False
-                break
-
-            if not second_error: delete_terminal_lines(1)
-            else: delete_terminal_lines(2)
-            print('Por favor, coloque una opción válida.')
-            second_error = True
-
-def change_data_route_menu():
-    global JSON_DATA_ROUTE
-
-    while True:
-        clear_terminal()
-        dis_menu_change_data_route()
-        second_error = False
-
-        print(f'Actual ruta de los datos: {JSON_DATA_ROUTE}\n')
-
-        data_route = input('Indique la nueva ruta de los datos: ')
-        if not os.path.exists(data_route): 
-            print('La ruta no existe.')
-            while True:
-                act = input('Desea crear la ruta? (S / N) ').lower()
-                if act in ['s', 'n']: 
-                    second_error = False
-                    break
-
-                if not second_error: delete_terminal_lines(1)
-                else: delete_terminal_lines(2)
-                print('Por favor, coloque una opción válida.')
-                second_error = True
-
-            while True:
-                act = input('Está seguro de la nueva ruta de los datos? (S / N) ').lower()
-                if act in ['s', 'n']: 
-                    second_error = False
-                    break
-
-                if not second_error: delete_terminal_lines(1)
-                else: delete_terminal_lines(2)
-                print('Por favor, coloque una opción válida.')
-                second_error = True
-
-            if act == 's': 
-                os.makedirs(data_route)
-                print('Ruta creada con éxito!')
-            else: 
-                print('Ruta no creada.')
-                input('Pulse Enter para continuar')
-                if try_again(): continue
-                break
-    
-    JSON_DATA_ROUTE = data_route
-
-def option_menu():
+def option_menu() -> None:
     while True:
         clear_terminal()
         dis_option_menu()
@@ -1106,7 +814,7 @@ def option_menu():
 
         clear_terminal()
 
-def save_program_data():
+def save_program_data() -> None:
     global DB_HOST
     global DB_USER
     global DB_PASSWORD
@@ -1128,7 +836,7 @@ def save_program_data():
 
     file.close()
 
-def main_menu():
+def main_menu() -> None:
     try:
         while True:
             clear_terminal()
@@ -1162,7 +870,7 @@ def main_menu():
                 input('Pulse Enter para continuar')
 
             clear_terminal()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, EOFError) as e:
             print('')
             print('Cerrando el programa...')
 
