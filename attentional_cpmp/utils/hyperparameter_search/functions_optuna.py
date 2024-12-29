@@ -52,6 +52,7 @@ def objective(trial: Trial,
 
         value_dim = trial.suggest_categorical("value_dim", [None, *range(1, max_value_dim, step)])
 
+
         dropout = trial.suggest_float('dropout', 0.0, 0.9)
         rate = trial.suggest_float('rate', 0.0, 0.9)
 
