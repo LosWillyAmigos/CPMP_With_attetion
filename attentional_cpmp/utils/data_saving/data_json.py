@@ -26,7 +26,7 @@ def save_data_json(States : np.array, Labels : np.array, name_file : str) -> boo
     return True
 
 def load_data_json(name_file:str) -> tuple:
-    with open(name_file + '.json', 'r') as archivo_json:
+    with open(name_file, 'r') as archivo_json:
         data = json.load(archivo_json)
 
     states = []

@@ -60,10 +60,7 @@ class BestHyperparameterSaver(Callback):
         new_dictionary['num_heads'] = dict_copy_hyp['num_heads']
         new_dictionary['epsilon'] = dict_copy_hyp['epsilon']
         new_dictionary['key_dim'] = dict_copy_hyp['key_dim']
-        if dict_copy_hyp['value_dim'] == 0:
-            new_dictionary['value_dim'] = None
-        else:
-            new_dictionary['value_dim'] = dict_copy_hyp['value_dim']
+        new_dictionary['value_dim'] = dict_copy_hyp['value_dim']
 
         new_dictionary['dropout'] = dict_copy_hyp['dropout']
         new_dictionary['rate'] = dict_copy_hyp['rate']

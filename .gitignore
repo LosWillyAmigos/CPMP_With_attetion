@@ -9,3 +9,7 @@ data/
 hyperparameter_test/
 data/
 colabs/
+slurm/
+build_optuna/
+env/
+trials/

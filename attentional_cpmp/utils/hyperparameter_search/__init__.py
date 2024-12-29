@@ -1,2 +1,6 @@
 from attentional_cpmp.utils.hyperparameter_search.HyperparameterStudy import HyperparameterStudy
-from attentional_cpmp.utils.hyperparameter_search.functions import build_model
+from attentional_cpmp.utils.hyperparameter_search.functions_keras import build_model
+from attentional_cpmp.utils.hyperparameter_search.functions_optuna import objective
+from attentional_cpmp.utils.hyperparameter_search.functions_optuna import load_json
+from attentional_cpmp.utils.hyperparameter_search.functions_optuna import insert_trials
+from attentional_cpmp.utils.hyperparameter_search.functions_optuna import show_importances
