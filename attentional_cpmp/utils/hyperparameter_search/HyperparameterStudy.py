@@ -47,9 +47,7 @@ class HyperparameterStudy:
       num_heads = trial.suggest_int('num_heads', 1, self.__max_num_heads)
       key_dim = trial.suggest_int('key_dim', 1, self.__max_key_dim)
 
-      value_dim = trial.suggest_int('value_dim', 0, self.__max_value_dim)
-      if value_dim == 0:
-          value_dim = None
+      value_dim = trial.suggest_categorical("value_dim", [None, *range(1, self.__max_value_dim)])
 
       dropout = trial.suggest_float('dropout', 0.0, 0.9)
       rate = trial.suggest_float('rate', 0.0, 0.9)
