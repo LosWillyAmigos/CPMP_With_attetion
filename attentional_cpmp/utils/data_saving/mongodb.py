@@ -1,5 +1,5 @@
-from cpmp_ml.utils.generator import load_simbol
-from cpmp_ml.utils import delete_terminal_lines
+#from cpmp_ml.utils.generator import load_simbol
+#from cpmp_ml.utils import delete_terminal_lines
 import numpy as np
 import pymongo
 import re
@@ -93,10 +93,11 @@ def save_data_mongo(collection, data: list[np.ndarray], labels: list[np.ndarray]
                 state = {'States': data[i], 'Labels': labels[i].tolist()}
                 
             collection.insert_one(state)
-
+            '''
             if verbose:
                 load_simbol(i + 1, size, text= 'Datos guardados:')
                 if i + 1 < size: delete_terminal_lines(1)
+            '''
         except pymongo.errors.ConnectionFailure as conection_Error:
             print('Error en la conexión con la base de datos: ' + str(conection_Error))
             return False

@@ -1,5 +1,5 @@
-from cpmp_ml.utils.generator import load_simbol
-from cpmp_ml.utils import delete_terminal_lines
+#from cpmp_ml.utils.generator import load_simbol
+#from cpmp_ml.utils import delete_terminal_lines
 import json
 import numpy as np
 import uuid
@@ -23,9 +23,11 @@ def save_data_json(States : np.ndarray, Labels : np.ndarray, name_file : str, ve
         }
         datos.append(element)
 
+        '''
         if verbose:
             load_simbol(idx + 1, size, text= 'Datos guardados:')
             if idx + 1 < size: delete_terminal_lines(1)
+        '''
 
     with open(name_file + '.json', 'w') as archivo_json:
         json.dump(datos, archivo_json, indent=2)

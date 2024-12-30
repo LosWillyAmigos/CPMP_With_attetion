@@ -2,13 +2,14 @@ from keras.models import Model
 from copy import deepcopy
 from cpmp_ml.optimizer import OptimizerStrategy
 from cpmp_ml.utils import generate_random_layout
+from numpy import mean, median
 
 import numpy as np
 import matplotlib.pyplot as plt
 import random
 import pandas as pd
 import os
-from numpy import mean, median
+import time
 
 def validate_optimizers(optimizers: list[OptimizerStrategy],
                    S: int, 
@@ -45,28 +46,341 @@ def validate_optimizers(optimizers: list[OptimizerStrategy],
                 show_only_solved(final_costs[i], len(final_costs[i]), sample_size)
             else: show_all_solved(final_costs[i], number_of_decimals, sample_size)
 
-def calculate_solved(costs: list, sample_size: int):
-    counter = []
-    for index_state in range(sample_size):
-            counter.append(search_unsolved(costs, index_state))
-    return counter
+def validation_optimizer_per_container(optimizers: list[OptimizerStrategy],
+                                       optimizers_name: list[str],
+                                       S: list,
+                                       H: int,
+                                       sample_size: int = 1000,
+                                       output_dir: str = "output/",
+                                       calculate_only_solved: bool = False,
+                                       hyperparameter_name: str = "model"):
+    for state in S:
+        # Guardar la gráfica para cada estado
+        plot_path = f"{output_dir}plots/N_CONTAINERS/"
+        excel_path = f"{output_dir}excels/N_CONTAINERS/"
+        print(f"Generando gráfica para estado {state}...")
+        validation_optimizer_per_C(optimizers=optimizers,
+                                 optimizers_name=optimizers_name,
+                                 S=int(state),
+                                 H=H,
+                                 sample_size=sample_size,
+                                 excel_path=excel_path,
+                                 calculate_only_solved=calculate_only_solved,
+                                 path_plot=plot_path,
+                                 create_plot=True,
+                                 model_name=hyperparameter_name,
+                                 max_steps=int(state) * (H - 2) * 2)
 
-def search_unsolved(costs: list, index):
-    for cost in costs:
-        if cost[index] == -1: 
-            return False
-    return True
 
-def get_final_costs(costs: list[list], solveds: list, sample_size: int, num_optimizer):
-    final_costs = [ [] for _ in range(num_optimizer)]
-    for index_solved in range(sample_size):
-        if solveds[index_solved]:
-            for index_cost in range(num_optimizer):
-                final_costs[index_cost].append(costs[index_cost][index_solved])
+def validation_optimizer_per_C(optimizers: list[OptimizerStrategy],
+                            optimizers_name: list[str],
+                            S: int,
+                            H: int,
+                            sample_size: int = 1000,
+                            excel_path: str | None = None,
+                            calculate_only_solved: bool = False,
+                            create_plot: bool = False,
+                            model_name: str = "model",
+                            path_plot: str = "plot.png",
+                            **kwargs):
+    
+    os.makedirs(path_plot, exist_ok=True)
+    os.makedirs(excel_path, exist_ok=True)
+    
+    x = [i for i in range(S * 2, (S * (H - 2)) + 1)]  # Límites de S*2 hasta S*(H-2)
 
-    return final_costs
-                
+    lays_N = [[generate_random_layout(S, H, n) for _ in range(sample_size)] for n in x]
+
+    excel_content = {}
+    for name in optimizers_name:
+        excel_content[name] = {
+            "State" : x,
+            "Percentage" : [],
+            "Mean" : [],
+            "Median" : [],
+            "Min" : [],
+            "Max" : [],
+            "Time" : [],
+            "Solved" : [],
+            "Size Sample" : []
+        }
+
+    for n in x:
+        costs = []
+        for i, optimizer in enumerate(optimizers):
+            copy_states = deepcopy(lays_N[n - (S * 2)])
+            start_time = time.time()
+            cost, _ = optimizer.solve(lays=np.array(copy_states), **kwargs)
+            end_time = time.time()
+            delta = end_time - start_time
+            costs.append(cost)
+            excel_content[optimizers_name[i]]["Time"].append(f"{delta:.12f}")
+
+        if calculate_only_solved:
+            counter_solved = calculate_solved(costs, sample_size)
+            final_costs = get_final_costs(costs, counter_solved, sample_size, len(optimizers))
+        else:
+            final_costs = costs
+
+        for i, optimizer in enumerate(optimizers):
+            results, mean_steps, median_steps, min_steps, max_steps = get_statics(final_costs[i], 6, sample_size)
+            excel_content[optimizers_name[i]]["Percentage"].append(results)
+            excel_content[optimizers_name[i]]["Mean"].append(mean_steps)
+            excel_content[optimizers_name[i]]["Median"].append(median_steps)
+            excel_content[optimizers_name[i]]["Min"].append(min_steps)
+            excel_content[optimizers_name[i]]["Max"].append(max_steps)
+            excel_content[optimizers_name[i]]["Solved"].append(len(final_costs[i]))
+            if calculate_only_solved:
+                excel_content[optimizers_name[i]]["Size Sample"].append(len(final_costs[i]))
+            else: 
+                excel_content[optimizers_name[i]]["Size Sample"].append(sample_size)
+
+    # Crear un único archivo Excel con múltiples hojas
+    with pd.ExcelWriter(f'{excel_path}{model_name}_STATE_{S}_N_CONTAINERS.xlsx', engine='openpyxl') as writer:
+        for name in optimizers_name:
+            df = pd.DataFrame(excel_content[name])
+            df.to_excel(writer, sheet_name=name, index=False)
+
+
+    if create_plot:
+        for i, optimizer in enumerate(optimizers):
+            plt.plot(x, excel_content[optimizers_name[i]]["Percentage"], marker='o')
+            plt.xlabel('N - Cantidad de contenedores')
+            plt.ylabel('Porcentaje')
+            plt.title(f'Porcentaje de acierto en relación N - {model_name} - {optimizers_name[i]}')
+            plt.grid(True)
+            plt.savefig(f"{path_plot}{model_name}_{optimizers_name[i]}_TO_STATE_{S}_N_CONTAINERS_PLOT.png")
+            plt.close()
+
+def validation_optimizer_per_stack(optimizers: list[OptimizerStrategy],
+                                       optimizers_name: list[str],
+                                       S: list,
+                                       H: int,
+                                       N: int | None = None,
+                                       sample_size: int = 1000,
+                                       output_dir: str = "output/",
+                                       calculate_only_solved: bool = False,
+                                       hyperparameter_name: str = "model"):
+    plot_path = f"{output_dir}plots/S_STACKS/"
+    excel_path = f"{output_dir}excels/S_STACKS/"
+    print(f"Generando gráfica para estado {S}...")
+    validation_optimizer_per_S(optimizers=optimizers,
+                                optimizers_name=optimizers_name,
+                                S=[int(state) for state in S],
+                                H=H,
+                                N=None,
+                                sample_size=sample_size,
+                                excel_path=excel_path,
+                                calculate_only_solved=calculate_only_solved,
+                                path_plot=plot_path,
+                                create_plot=True,
+                                model_name=hyperparameter_name)
             
+def validation_optimizer_per_S(optimizers: list[OptimizerStrategy],
+                            optimizers_name: list[str],
+                            S: list[int],
+                            H: int,
+                            N: int | None = None,
+                            sample_size: int = 1000,
+                            excel_path: str | None = None,
+                            calculate_only_solved: bool = False,
+                            create_plot: bool = False,
+                            model_name: str = "model",
+                            path_plot: str = "plot.png",
+                            **kwargs):
+    
+    os.makedirs(path_plot, exist_ok=True)
+    os.makedirs(excel_path, exist_ok=True)
+    lays_S = []
+
+    if N is not None:
+        for s in S:
+            lays_S.append([generate_random_layout(s, H, N) for _ in range(sample_size)])
+    elif N is None:
+        for s in S:
+            lays_S.append([generate_random_layout(s, H, random.randint(s * 2, (s * (H - 2)))) for _ in range(sample_size)])
+
+    excel_content = {}
+    for name in optimizers_name:
+        excel_content[name] = {
+            "State - S" : S,
+            "Percentage" : [],
+            "Mean" : [],
+            "Median" : [],
+            "Min" : [],
+            "Max" : [],
+            "Time" : [],
+            "Solved" : [],
+            "Size Sample" : []
+        }
+
+    for s in range(len(S)):
+        costs = []
+        for i, optimizer in enumerate(optimizers):
+            kwargs["max_steps"] = S[s] * (H - 2) * 2
+            copy_states = deepcopy(lays_S[s])
+            start_time = time.time()
+            cost, _ = optimizer.solve(lays=np.array(copy_states), **kwargs)
+            end_time = time.time()
+            delta = end_time - start_time
+            costs.append(cost)
+            excel_content[optimizers_name[i]]["Time"].append(f"{delta:.12f}")
+
+        if calculate_only_solved:
+            counter_solved = calculate_solved(costs, sample_size)
+            final_costs = get_final_costs(costs, counter_solved, sample_size, len(optimizers))
+        else:
+            final_costs = costs
+
+        for i, optimizer in enumerate(optimizers):
+            results, mean_steps, median_steps, min_steps, max_steps = get_statics(final_costs[i], 6, sample_size)
+            excel_content[optimizers_name[i]]["Percentage"].append(results)
+            excel_content[optimizers_name[i]]["Mean"].append(mean_steps)
+            excel_content[optimizers_name[i]]["Median"].append(median_steps)
+            excel_content[optimizers_name[i]]["Min"].append(min_steps)
+            excel_content[optimizers_name[i]]["Max"].append(max_steps)
+            excel_content[optimizers_name[i]]["Solved"].append(len(final_costs[i]))
+            if calculate_only_solved:
+                excel_content[optimizers_name[i]]["Size Sample"].append(len(final_costs[i]))
+            else: 
+                excel_content[optimizers_name[i]]["Size Sample"].append(sample_size)
+
+    # Crear un único archivo Excel con múltiples hojas
+    with pd.ExcelWriter(f'{excel_path}{model_name}_STATE_{S}_S_STACKS.xlsx', engine='openpyxl') as writer:
+        for name in optimizers_name:
+            df = pd.DataFrame(excel_content[name])
+            df.to_excel(writer, sheet_name=name, index=False)
+
+
+    if create_plot:
+        for i, optimizer in enumerate(optimizers):
+            plt.plot(S, excel_content[optimizers_name[i]]["Percentage"], marker='o')
+            plt.xlabel('S -STACKS')
+            plt.ylabel('Porcentaje')
+            plt.title(f'Porcentaje de acierto en relación S - {model_name} - {optimizers_name[i]}')
+            plt.grid(True)
+            plt.savefig(f"{path_plot}{model_name}_{optimizers_name[i]}_TO_STATE_{S}_S_STACKS_PLOT.png")
+            plt.close()
+
+
+def percentage_per_container(optimizer: OptimizerStrategy, 
+                             S: int, 
+                             H: int, 
+                             sample_size: int = 1000,
+                             save_path: str ="plot.png", 
+                             excel_path: str | None = None, 
+                             model_name: str ="model",
+                             **kwargs):
+    """Genera un gráfico del porcentaje de aciertos por cantidad de contenedores y lo guarda. También guarda los resultados en un Excel."""
+    x = [i for i in range(S * 2, (S * (H - 2)) + 1)]  # Límites de S*2 hasta S*(H-2)
+    y = []  # Resultados
+
+    mean_list = []
+    median_list = []
+    min_list = []
+    max_list = []
+    times_list = []
+
+    lays_N = [[generate_random_layout(S, H, n) for _ in range(sample_size)] for n in x]
+
+    for n in x:
+        start_time = time.time()
+        costs, _= optimizer.solve(lays=np.array(lays_N[n - (S * 2)]), **kwargs)
+        end_time = time.time()
+        delta = end_time - start_time
+        times_list.append(f"{delta:.12f}")
+        results, mean_steps, median_steps, min_steps, max_steps = get_statics(costs, 6, sample_size)
+        y.append(results)
+        mean_list.append(mean_steps)
+        median_list.append(median_steps)
+        min_list.append(min_steps)
+        max_list.append(max_steps)
+
+
+    # Crear el gráfico de línea
+    plt.plot(x, y, marker='o')
+
+    # Agregar etiquetas y título
+    plt.xlabel('N - Cantidad de contenedores')
+    plt.ylabel('Porcentaje')
+    plt.title(f'Porcentaje de acierto en relación N - {model_name}')
+
+    # Mostrar y guardar el gráfico
+    plt.grid(True)
+    plt.savefig(save_path)
+    plt.close()
+
+    create_dataframe({f"N - Cantidad de contenedores - {S}x{H}": x, 
+                    "Porcentaje de acierto": y,
+                    "Media": mean_list,
+                    "Mediana": median_list,
+                    "Mínimo": min_list,
+                    "Máximo": max_list},
+                    excel_path, f"{model_name}_STATE_{S}_N_CONTAINERS.xlsx", H)
+
+def percentage_per_S(optimizer: OptimizerStrategy, 
+                    S: list[int], 
+                    H: int, 
+                    N: int | None = None,
+                    sample_size: int = 1000,
+                    save_path: str ="plot.png", 
+                    excel_path: str | None = None, 
+                    model_name: str ="model",
+                    **kwargs):
+
+    lays_S = []
+    y = []
+
+    mean_list = []
+    median_list = []
+    min_list = []
+    max_list = []
+    times_list = []
+
+    if N is not None:
+        for s in S:
+            lays_S.append([generate_random_layout(s, H, N) for _ in range(sample_size)])
+    elif N is None:
+        for s in S:
+            lays_S.append([generate_random_layout(s, H, random.randint(s * 2, (s * (H - 2)))) for _ in range(sample_size)])
+
+    for s in range(len(S)):
+        kwargs["max_steps"] = S[s] * (H - 2) * 2
+        start_time = time.time()
+        costs, _ = optimizer.solve(lays=np.array(lays_S[s]), **kwargs)
+        end_time = time.time()
+        delta = end_time - start_time
+        times_list.append(f"{delta:.12f}")
+        results, mean_steps, median_steps, min_steps, max_steps = get_statics(costs, 6, sample_size)
+        y.append(results)
+        mean_list.append(mean_steps)
+        median_list.append(median_steps)
+        min_list.append(min_steps)
+        max_list.append(max_steps)
+
+
+    # Crear el gráfico de línea
+    plt.plot(S, y, marker='o')
+
+    # Agregar etiquetas y título
+    plt.xlabel('N - Cantidad de contenedores')
+    plt.ylabel('Porcentaje')
+    plt.title(f'Porcentaje de acierto en relación S - {model_name}')
+
+    # Mostrar y guardar el gráfico
+    plt.grid(True)
+    plt.savefig(save_path)
+    plt.close()
+
+    create_dataframe({"S - pilas": S, 
+                    "Porcentaje de acierto": y,
+                    "Media": mean_list,
+                    "Mediana": median_list,
+                    "Mínimo": min_list,
+                    "Máximo": max_list},
+                    excel_path, f"{model_name}_some_Sx{H}.xlsx", H)
+
+
 def show_all_solved(costs:list, number_of_decimals:int, sample_size:int):
     valid_costs = [v for v in costs if v!=-1]
     results = len(valid_costs) / sample_size * 100.
@@ -87,105 +401,50 @@ def show_only_solved(costs:list, number_of_solved:int, sample_size:int):
     print('')
 
 
-def percentage_per_container(optimizer: OptimizerStrategy, 
-                             S: int, 
-                             H: int, 
-                             sample_size: int = 1000,
-                             save_path: str ="plot.png", 
-                             excel_path: str | None = None, 
-                             model_name: str ="model",
-                             **kwargs):
-    """Genera un gráfico del porcentaje de aciertos por cantidad de contenedores y lo guarda. También guarda los resultados en un Excel."""
-    x = [i for i in range(S * 2, (S * (H - 2)) + 1)]  # Límites de S*2 hasta S*(H-2)
-    y = []  # Resultados
+def get_statics(costs: list, number_of_decimals: int, sample_size: int):
+    valid_costs = [v for v in costs if v!=-1]
+    if len(valid_costs) == 0: return 0, 0, 0, 0, 0
 
-    mean_list = []
-    median_list = []
-    min_list = []
-    max_list = []
+    results = len(valid_costs) / sample_size * 100.
+    mean_steps = np.mean(valid_costs)
+    median_steps = np.median(valid_costs)
+    min_steps = np.min(valid_costs)
+    max_steps = np.max(valid_costs)
+    return results, mean_steps, median_steps, min_steps, max_steps
 
-    lays_N = [[generate_random_layout(S, H, n) for _ in range(sample_size)] for n in x]
 
-    for n in x:
-        costs = optimizer.solve(lays=np.array(lays_N[n - (S * 2)]), **kwargs)
-        valid_costs = [v for v in costs if v != -1]
-        results_model = len(valid_costs) / sample_size * 100.0
-        y.append(results_model)
-        mean_list.append(np.mean(valid_costs))
-        median_list.append(np.median(valid_costs))
-        min_list.append(np.min(valid_costs))
-        max_list.append(np.max(valid_costs))
+def calculate_solved(costs: list, sample_size: int):
+    counter = []
+    for index_state in range(sample_size):
+            counter.append(search_unsolved(costs, index_state))
+    return counter
 
-    # Crear el gráfico de línea
-    plt.plot(x, y, marker='o')
+def search_unsolved(costs: list, index):
+    for cost in costs:
+        if cost[index] == -1: 
+            return False
+    return True
 
-    # Agregar etiquetas y título
-    plt.xlabel('N - Cantidad de contenedores')
-    plt.ylabel('Porcentaje')
-    plt.title(f'Porcentaje de acierto en relación N - {model_name}')
+def get_final_costs(costs: list[list], solveds: list, sample_size: int, num_optimizer):
+    final_costs = [ [] for _ in range(num_optimizer)]
+    for index_solved in range(sample_size):
+        if solveds[index_solved]:
+            for index_cost in range(num_optimizer):
+                final_costs[index_cost].append(costs[index_cost][index_solved])
 
-    # Mostrar y guardar el gráfico
-    plt.grid(True)
-    plt.savefig(save_path)
-    plt.close()
+    return final_costs
 
+def get_final_cost(costs: list, solveds: list, sample_size: int):
+    final_costs = []
+    for index_solved in range(sample_size):
+        if solveds[index_solved]:
+            final_costs.append(costs[index_solved])
+
+    return final_costs
+
+def create_dataframe(dictionary, excel_path, model_name, H):
     # Guardar resultados en un Excel
     if excel_path is not None:
-        results_df = pd.DataFrame({"N - Cantidad de contenedores": x, "Porcentaje de acierto": y})
-        excel_name = f"{model_name}_S:{S}_H:{H}.xlsx"
-        results_df.to_excel(os.path.join(os.path.dirname(excel_path), excel_name), index=False)
-
-def percentage_per_S(optimizer: OptimizerStrategy, 
-                    S: list[int], 
-                    H: int, 
-                    N: int | None = None,
-                    sample_size: int = 1000,
-                    save_path: str ="plot.png", 
-                    excel_path: str | None = None, 
-                    model_name: str ="model",
-                    **kwargs):
-
-    lays_S = []
-    y = []
-
-    mean_list = []
-    median_list = []
-    min_list = []
-    max_list = []
-
-    if N is not None:
-        for s in S:
-            lays_S.append([generate_random_layout(s, H, N) for _ in range(sample_size)])
-    elif N is None:
-        for s in S:
-            lays_S.append([generate_random_layout(s, H, random.randint(S * 2, (S * (H - 2)))) for _ in range(sample_size)])
-
-    for s in range(len(S)):
-        kwargs["max_steps"] = len(S[s]) * (H - 2) * 2
-        costs, _ = optimizer.solve(lays=np.array(lays_S[s]), **kwargs)
-        valid_costs = [v for v in costs if v != -1]
-        results_model = len(valid_costs) / sample_size * 100.0
-        y.append(results_model)
-        mean_list.append(np.mean(valid_costs))
-        median_list.append(np.median(valid_costs))
-        min_list.append(np.min(valid_costs))
-        max_list.append(np.max(valid_costs))
-
-    # Crear el gráfico de línea
-    plt.plot(S, y, marker='o')
-
-    # Agregar etiquetas y título
-    plt.xlabel('N - Cantidad de contenedores')
-    plt.ylabel('Porcentaje')
-    plt.title(f'Porcentaje de acierto en relación S - {model_name}')
-
-    # Mostrar y guardar el gráfico
-    plt.grid(True)
-    plt.savefig(save_path)
-    plt.close()
-
-    # Guardar resultados en un Excel
-    if excel_path is not None:
-        results_df = pd.DataFrame({"S - pilas": S, "Porcentaje de acierto": y})
-        excel_name = f"{model_name}_some_Sx{H}.xlsx"
+        results_df = pd.DataFrame(dictionary)
+        excel_name = model_name
         results_df.to_excel(os.path.join(os.path.dirname(excel_path), excel_name), index=False)
