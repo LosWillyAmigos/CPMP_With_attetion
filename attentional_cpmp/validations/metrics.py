@@ -40,7 +40,7 @@ def validate_optimizers(optimizers: list[OptimizerStrategy],
     for i in range(len(optimizers)):
         print(f'************ Optimizer {i+1} ****************')
         if len(final_costs[i]) == 0:
-            print(f"Optimizer {i+1} could not solved any of the {len(final_costs[i])}/{sample_size} problems considered")
+            print(f'Optimizer {i+1} could not solved any of the {len(final_costs[i])}/{sample_size} problems considered')
         else:
             if calculate_only_solved:
                 show_only_solved(final_costs[i], len(final_costs[i]), sample_size)
@@ -56,9 +56,9 @@ def validation_optimizer_per_container(optimizers: list[OptimizerStrategy],
                                        hyperparameter_name: str = "model"):
     for state in S:
         # Guardar la gráfica para cada estado
-        plot_path = f"{output_dir}plots/N_CONTAINERS/"
-        excel_path = f"{output_dir}excels/N_CONTAINERS/"
-        print(f"Generando gráfica para estado {state}...")
+        plot_path = f'{output_dir}plots/N_CONTAINERS/'
+        excel_path = f'{output_dir}excels/N_CONTAINERS/'
+        print(f'Generando gráfica para estado {state}...')
         validation_optimizer_per_C(optimizers=optimizers,
                                  optimizers_name=optimizers_name,
                                  S=int(state),
@@ -114,7 +114,7 @@ def validation_optimizer_per_C(optimizers: list[OptimizerStrategy],
             end_time = time.time()
             delta = end_time - start_time
             costs.append(cost)
-            excel_content[optimizers_name[i]]["Time"].append(f"{delta:.12f}")
+            excel_content[optimizers_name[i]]["Time"].append(f'{delta:.12f}')
 
         if calculate_only_solved:
             counter_solved = calculate_solved(costs, sample_size)
@@ -149,7 +149,7 @@ def validation_optimizer_per_C(optimizers: list[OptimizerStrategy],
             plt.ylabel('Porcentaje')
             plt.title(f'Porcentaje de acierto en relación N - {model_name} - {optimizers_name[i]}')
             plt.grid(True)
-            plt.savefig(f"{path_plot}{model_name}_{optimizers_name[i]}_TO_STATE_{S}_N_CONTAINERS_PLOT.png")
+            plt.savefig(f'{path_plot}{model_name}_{optimizers_name[i]}_TO_STATE_{S}_N_CONTAINERS_PLOT.png')
             plt.close()
 
 def validation_optimizer_per_stack(optimizers: list[OptimizerStrategy],
@@ -161,9 +161,9 @@ def validation_optimizer_per_stack(optimizers: list[OptimizerStrategy],
                                        output_dir: str = "output/",
                                        calculate_only_solved: bool = False,
                                        hyperparameter_name: str = "model"):
-    plot_path = f"{output_dir}plots/S_STACKS/"
-    excel_path = f"{output_dir}excels/S_STACKS/"
-    print(f"Generando gráfica para estado {S}...")
+    plot_path = f'{output_dir}plots/S_STACKS/'
+    excel_path = f'{output_dir}excels/S_STACKS/'
+    print(f'Generando gráfica para estado {S}...')
     validation_optimizer_per_S(optimizers=optimizers,
                                 optimizers_name=optimizers_name,
                                 S=[int(state) for state in S],
@@ -224,7 +224,7 @@ def validation_optimizer_per_S(optimizers: list[OptimizerStrategy],
             end_time = time.time()
             delta = end_time - start_time
             costs.append(cost)
-            excel_content[optimizers_name[i]]["Time"].append(f"{delta:.12f}")
+            excel_content[optimizers_name[i]]["Time"].append(f'{delta:.12f}')
 
         if calculate_only_solved:
             counter_solved = calculate_solved(costs, sample_size)
@@ -259,7 +259,7 @@ def validation_optimizer_per_S(optimizers: list[OptimizerStrategy],
             plt.ylabel('Porcentaje')
             plt.title(f'Porcentaje de acierto en relación S - {model_name} - {optimizers_name[i]}')
             plt.grid(True)
-            plt.savefig(f"{path_plot}{model_name}_{optimizers_name[i]}_TO_STATE_{S}_S_STACKS_PLOT.png")
+            plt.savefig(f'{path_plot}{model_name}_{optimizers_name[i]}_TO_STATE_{S}_S_STACKS_PLOT.png')
             plt.close()
 
 
@@ -288,7 +288,7 @@ def percentage_per_container(optimizer: OptimizerStrategy,
         costs, _= optimizer.solve(lays=np.array(lays_N[n - (S * 2)]), **kwargs)
         end_time = time.time()
         delta = end_time - start_time
-        times_list.append(f"{delta:.12f}")
+        times_list.append(f'{delta:.12f}')
         results, mean_steps, median_steps, min_steps, max_steps = get_statics(costs, 6, sample_size)
         y.append(results)
         mean_list.append(mean_steps)
@@ -310,13 +310,13 @@ def percentage_per_container(optimizer: OptimizerStrategy,
     plt.savefig(save_path)
     plt.close()
 
-    create_dataframe({f"N - Cantidad de contenedores - {S}x{H}": x, 
+    create_dataframe({f'N - Cantidad de contenedores - {S}x{H}': x, 
                     "Porcentaje de acierto": y,
                     "Media": mean_list,
                     "Mediana": median_list,
                     "Mínimo": min_list,
                     "Máximo": max_list},
-                    excel_path, f"{model_name}_STATE_{S}_N_CONTAINERS.xlsx", H)
+                    excel_path, f'{model_name}_STATE_{S}_N_CONTAINERS.xlsx', H)
 
 def percentage_per_S(optimizer: OptimizerStrategy, 
                     S: list[int], 
@@ -350,7 +350,7 @@ def percentage_per_S(optimizer: OptimizerStrategy,
         costs, _ = optimizer.solve(lays=np.array(lays_S[s]), **kwargs)
         end_time = time.time()
         delta = end_time - start_time
-        times_list.append(f"{delta:.12f}")
+        times_list.append(f'{delta:.12f}')
         results, mean_steps, median_steps, min_steps, max_steps = get_statics(costs, 6, sample_size)
         y.append(results)
         mean_list.append(mean_steps)
@@ -378,26 +378,26 @@ def percentage_per_S(optimizer: OptimizerStrategy,
                     "Mediana": median_list,
                     "Mínimo": min_list,
                     "Máximo": max_list},
-                    excel_path, f"{model_name}_some_Sx{H}.xlsx", H)
+                    excel_path, f'{model_name}_some_Sx{H}.xlsx', H)
 
 
 def show_all_solved(costs:list, number_of_decimals:int, sample_size:int):
     valid_costs = [v for v in costs if v!=-1]
     results = len(valid_costs) / sample_size * 100.
-    print(f"Problems solved (%): {round(results, number_of_decimals)}%")
-    print(f"Mean steps: {mean(valid_costs)}")
-    print(f"Median steps: {median(valid_costs)}")
-    print(f"Min steps: {min(valid_costs)}")
-    print(f"Max steps: {max(valid_costs)}")
+    print(f'Problems solved (%): {round(results, number_of_decimals)}%')
+    print(f'Mean steps: {mean(valid_costs)}')
+    print(f'Median steps: {median(valid_costs)}')
+    print(f'Min steps: {min(valid_costs)}')
+    print(f'Max steps: {max(valid_costs)}')
     print('')
 
 def show_only_solved(costs:list, number_of_solved:int, sample_size:int):
     valid_costs = [v for v in costs if v!=-1]
     print(f'Number of problems solved: {number_of_solved}/{sample_size}')
-    print(f"Mean steps: {mean(valid_costs)}")
-    print(f"Median steps: {median(valid_costs)}")
-    print(f"Min steps: {min(valid_costs)}")
-    print(f"Max steps: {max(valid_costs)}")
+    print(f'Mean steps: {mean(valid_costs)}')
+    print(f'Median steps: {median(valid_costs)}')
+    print(f'Min steps: {min(valid_costs)}')
+    print(f'Max steps: {max(valid_costs)}')
     print('')
 
 
