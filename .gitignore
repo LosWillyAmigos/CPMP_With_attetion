@@ -5,8 +5,11 @@ pruebas.ipynb
 data/
 __pycache__/
 .venv/
-tests/
 data/
 hyperparameter_test/
-.env
-test.ipynb
+data/
+colabs/
+slurm/
+build_optuna/
+env/
+trials/

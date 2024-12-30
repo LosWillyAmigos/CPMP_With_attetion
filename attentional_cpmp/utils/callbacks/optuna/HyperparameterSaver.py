@@ -35,10 +35,8 @@ class HyperparameterSaver(Callback):
         new_dictionary['num_heads'] = hyperparameters['num_heads']
         new_dictionary['epsilon'] = hyperparameters['epsilon']
         new_dictionary['key_dim'] = hyperparameters['key_dim']
-        if hyperparameters['value_dim'] == 0:
-            new_dictionary['value_dim'] = None
-        else:
-            new_dictionary['value_dim'] = hyperparameters['value_dim']
+
+        new_dictionary['value_dim'] = hyperparameters['value_dim']
 
         new_dictionary['dropout'] = hyperparameters['dropout']
         new_dictionary['rate'] = hyperparameters['rate']

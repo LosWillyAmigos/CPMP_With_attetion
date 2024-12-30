@@ -12,3 +12,4 @@ matplotlib==3.8.2
 pandas==2.2.3
 git+https://github.com/rilianx/CPMP-ML.git@develop
 git+https://github.com/LosWillyAmigos/CPMP_With_attention.git@dev-Slinking196
+keras-tuner==1.4.7

@@ -3,8 +3,9 @@ import pathlib
 from setuptools import find_packages, setup
 
 HERE = pathlib.Path(__file__).parent
-README = (HERE / "README.md").read_text(encoding="utf-8")
-VERSION = "2.5.0"
+
+README = (HERE / "README.md").read_text()
+VERSION = "2.6.2"
 
 setup(
     name="Attentional_CPMP",
@@ -24,12 +25,13 @@ setup(
         "pydot==1.4.2",
         "graphviz==0.20.3",
         "jupyter==1.0.0",
-        "optuna==4.1.0"
+        "optuna==4.1.0",
+        "optuna-integration==3.6.0",
+        "keras-tuner==1.4.7",
+        "cpmp_ml @ git+https://github.com/rilianx/CPMP-ML.git@develop#egg=cpmp_ml"
+        "pandas==2.2.3"
     ],
-    dependency_links=[
-        "git+https://github.com/rilianx/CPMP-ML.git@develop#egg=CPMP-ML"
-    ],
-    python_requires=">=3.11.9",
+    python_requires=">=3.10,<3.12",
     packages=find_packages(
         include=("attentional_cpmp", "attentional_cpmp.*"),
         exclude=["models", "models.*"]
