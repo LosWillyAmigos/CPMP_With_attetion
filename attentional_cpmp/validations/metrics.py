@@ -3,13 +3,86 @@ from copy import deepcopy
 from cpmp_ml.optimizer import OptimizerStrategy
 from cpmp_ml.utils import generate_random_layout
 from numpy import mean, median
+from keras.src.metrics import Metric, MeanSquaredError
 
+import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 import random
 import pandas as pd
 import os
 import time
+
+    
+class PercentageSolved(Metric):
+    def __init__(self, name="percentage_solved", threshold = 0.98, **kwargs):
+        super().__init__(name=name, **kwargs)
+        self.total = self.add_weight(name="total", initializer="zeros")
+        self.count = self.add_weight(name="count", initializer="zeros")
+        self.thresold = threshold
+    
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        y_true = tf.cast(y_true, tf.float32)
+        y_pred_binary = tf.cast(y_pred > self.thresold, tf.float32)
+        corrects = tf.reduce_sum(tf.cast(tf.equal(y_true, y_pred_binary), tf.float32), axis=-1)
+        percentage = corrects / tf.cast(tf.shape(y_true)[-1], tf.float32)
+        
+        self.total.assign_add(tf.reduce_sum(percentage))
+        self.count.assign_add(tf.cast(tf.size(percentage), tf.float32))
+    
+    def result(self):
+        return self.total / self.count
+    
+    def reset_states(self):
+        self.total.assign(0)
+        self.count.assign(0)
+
+
+def percentage_solved(y_true, y_pred):
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred_binary = tf.cast(y_pred > 0.5, tf.float32)
+    correctas = tf.reduce_sum(tf.cast(tf.equal(y_true, y_pred_binary), tf.float32), axis=-1)
+    porcentaje = correctas / tf.cast(tf.shape(y_true)[-1], tf.float32)
+    return tf.reduce_mean(porcentaje)
+
+def validation_per_stack(optimizer: OptimizerStrategy,
+                         S: list[int],
+                         H: int,
+                         N: list[int] | None = None,
+                         sample_size: int = 1000,
+                         median_percentage: bool = False,):
+    '''
+    Función de validación de estados aleatorios para un conjunto de pilas.
+
+    Args:
+        optimizer (OptimizerStrategy): Optimizador a validar.
+        S (list[int]): Lista de estados a validar.
+        H (int): Altura de las pilas.
+        N (list[int], optional): Lista de cantidad de contenedores. Defaults to None.
+        sample_size (int, optional): Tamaño de la muestra. Defaults to 1000.
+        median_percentage (bool, optional): Calcular la mediana de los porcentajes. Defaults to False.
+
+    Returns:
+        float | list[float]: Promedio de Porcentajes de aciertos. Si median=True, retorna la mediana de los porcentajes, en caso
+        contrario retorna la lista de lo porcentajes de los estados.
+    '''
+    
+    if N is None: N = [s*(H-2) for s in S]
+
+    percentages = []
+    
+    for s, n in zip(S, N):
+        lays = [generate_random_layout(s, H, n) for _ in range(sample_size)]
+        costs, _ = optimizer.solve(lays=np.array(lays), max_steps=s*(H-2)*2)
+        valid_costs = [v for v in costs if v!=-1]
+        results = len(valid_costs) / sample_size * 100.
+        percentages.append(results)
+
+    if median_percentage:
+        return np.median(percentages)
+    return percentages
+
+
 
 def validate_optimizers(optimizers: list[OptimizerStrategy],
                    S: int, 
