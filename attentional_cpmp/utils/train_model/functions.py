@@ -1,4 +1,4 @@
-from keras.src.callbacks import EarlyStopping
+from keras.src.callbacks import EarlyStopping, Callback
 from keras.src.models import Model
 
 from typing import Any
@@ -10,9 +10,9 @@ def normal_training(model: Model,
                     batch_size: int = 32, 
                     epochs: int = 10, 
                     validation_split: float = 0.2,
-                    patience: int = 3,
                     monitor: str = 'val_loss',
-                    verbose: int = 1) -> dict:
+                    verbose: int = 1,
+                    callbacks: list[Callback] = None) -> dict:
     '''
     Entrana el modelo con los datos de entrenamiento.
 
@@ -40,10 +40,7 @@ def normal_training(model: Model,
         if verbose == 1: print(f"Entrenando con el estado {stack}...")
         history = model.fit(np.stack(data[stack]["States"]), np.stack(data[stack]["Labels"]), 
                             batch_size=batch_size, epochs=epochs, validation_split=validation_split,
-                            callbacks=[EarlyStopping(monitor=monitor, 
-                                                     patience=patience, 
-                                                     restore_best_weights=True,
-                                                     verbose=verbose)],
+                            callbacks=callbacks,
                             verbose=verbose)
         
         state_history[stack] = {metric_name: history.history[metric_name] for metric_name in history.history.keys()}
@@ -59,9 +56,9 @@ def batch_training(model: Model,
                    epochs: int = 10,
                    validation_split: float = 0.2,
                    batch_size: int = 32,
-                   patience: int = 3,
                    monitor: str = 'val_loss',
-                   verbose: int = 1) -> dict:
+                   verbose: int = 1,
+                   callbacks: list[Callback] = None) -> dict:
     '''
     Entrana el modelo con los datos divididos en subconjuntos para cada estado.
 
@@ -105,10 +102,7 @@ def batch_training(model: Model,
                     batch_size=batch_size,
                     epochs=epochs,
                     validation_split=validation_split,
-                    callbacks=[EarlyStopping(monitor=monitor, 
-                                             patience=patience, 
-                                             restore_best_weights=True,
-                                             verbose=verbose)],
+                    callbacks=callbacks,
                 )
                 for metric, values in history.history.items():
                     if state not in state_history:

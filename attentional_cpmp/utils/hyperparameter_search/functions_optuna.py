@@ -241,7 +241,7 @@ def multi_objective(trial: Trial,
                                                 batch_size=batch_size,
                                                 epochs=epochs,
                                                 validation_split=validation_split,
-                                                patience=patience,
+                                                callbacks=callbacks,
                                                 monitor=monitor,
                                                 verbose=verbose)
             elif type_training == "batches":
@@ -252,7 +252,7 @@ def multi_objective(trial: Trial,
                                                 epochs=epochs,
                                                 validation_split=validation_split,
                                                 batch_size=batch_size,
-                                                patience=patience,
+                                                callbacks=callbacks,
                                                 monitor=monitor,
                                                 verbose=verbose)
 
