@@ -14,3 +14,4 @@ build_optuna/
 env/
 trials/
 testing_training_models/
+files/

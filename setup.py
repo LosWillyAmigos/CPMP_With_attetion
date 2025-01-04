@@ -5,7 +5,7 @@ from setuptools import find_packages, setup
 HERE = pathlib.Path(__file__).parent
 
 README = (HERE / "README.md").read_text()
-VERSION = "2.6.2"
+VERSION = "2.7.0"
 
 setup(
     name="Attentional_CPMP",
