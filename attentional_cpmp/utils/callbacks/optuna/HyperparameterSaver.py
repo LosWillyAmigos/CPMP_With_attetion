@@ -1,4 +1,5 @@
-from keras.callbacks import Callback
+from keras.api.callbacks import Callback
+from keras.api.metrics import Metric
 import json
 import os
 
@@ -7,7 +8,7 @@ class HyperparameterSaver(Callback):
                  trial, 
                  filename:str="hyperparameters.json",
                  monitor:str = 'val_loss',
-                 metrics:list = None):
+                 metrics:list[str | Metric] = None):
         super(HyperparameterSaver, self).__init__()
         self.trial = trial
         self.filename = filename
@@ -16,7 +17,10 @@ class HyperparameterSaver(Callback):
         self.metrics = []
         if metrics is not None:
             for metric in metrics:
-                 self.metrics.append('val_' + metric)
+                if isinstance(metric, str):
+                    self.metrics.append('val_' + metric)
+                elif isinstance(metric, Metric) or issubclass(metric, Metric):
+                    self.metrics.append('val_' + metric.name)
 
 
     def on_epoch_end(self, epoch, logs=None):

@@ -1,4 +1,5 @@
-from keras.callbacks import Callback
+from keras.api.callbacks import Callback
+from keras.api.metrics import Metric
 import json
 import os
 
@@ -6,7 +7,7 @@ class BestHyperparameterSaver(Callback):
     def __init__(self, 
                  trial, 
                  monitor:str='val_loss',
-                 metrics:list = None,
+                 metrics:list[str | Metric] = None,
                  mode:str='min', 
                  filename:str="best_hyperparameters.json"):
         super(BestHyperparameterSaver, self).__init__()
@@ -19,7 +20,10 @@ class BestHyperparameterSaver(Callback):
         self.metrics = []
         if metrics is not None:
             for metric in metrics:
-                 self.metrics.append('val_' + metric)
+                if isinstance(metric, str):
+                    self.metrics.append('val_' + metric)
+                elif isinstance(metric, Metric) or issubclass(metric, Metric):
+                    self.metrics.append('val_' + metric.name)
 
         if self.mode == 'min':
             default_best_score = float('inf')
