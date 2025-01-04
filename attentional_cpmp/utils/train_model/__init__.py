@@ -1,0 +1,2 @@
+from attentional_cpmp.utils.train_model.functions import normal_training
+from attentional_cpmp.utils.train_model.functions import batch_training
