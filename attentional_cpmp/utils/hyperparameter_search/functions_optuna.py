@@ -214,12 +214,10 @@ def multi_objective(trial: Trial,
       
         callbacks = []
         
-        pruning_callback = TFKerasPruningCallback(trial, monitor)
         early_stopping_callback = EarlyStopping(monitor= monitor, patience=patience,         
             mode='min', verbose=verbose, restore_best_weights=restore_best_weights
         )
         
-        callbacks.append(pruning_callback)
         callbacks.append(early_stopping_callback)
         
         if use_saver_callbacks:
@@ -264,7 +262,7 @@ def multi_objective(trial: Trial,
             raise e
         
         percentage = validation_per_stack(optimizer=GreedyModel(model=model, data_adapter=AttentionModel()),
-                                          S=S, H=H, N=None, sample_size=sample_size, median_percentage=True)
+                                          S=S, H=H, N=None, sample_size=sample_size, median_percentage=False)
 
         mean_val_loss = np.mean(
             [state_history[state][monitor][-1] for state in state_history]
@@ -275,7 +273,7 @@ def multi_objective(trial: Trial,
 
         clear_session()
 
-        return mean_val_loss, percentage
+        return [mean_val_loss, percentage]
 
 def insert_trials(path_trials:str = None, study: Study = None) -> None:
     if path_trials is None: 
