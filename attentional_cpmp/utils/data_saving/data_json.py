@@ -1,5 +1,4 @@
 from cpmp_ml.utils.generator import load_simbol
-from cpmp_ml.utils import delete_terminal_lines
 import json
 import numpy as np
 import uuid
@@ -23,29 +22,31 @@ def save_data_json(States : np.ndarray, Labels : np.ndarray, name_file : str, ve
         }
         datos.append(element)
 
-        if verbose:
-            load_simbol(idx + 1, size, text= 'Datos guardados:')
-            if idx + 1 < size: delete_terminal_lines(1)
+        if verbose: load_simbol(idx + 1, size, text= 'Datos guardados: ')
 
     with open(name_file + '.json', 'w') as archivo_json:
         json.dump(datos, archivo_json, indent=2)
 
     return True
 
-def load_data_json(name_file:str) -> tuple:
+def load_data_json(name_file: str, verbose: bool = True) -> tuple:
     with open(name_file, 'r') as archivo_json:
         data = json.load(archivo_json)
 
-    states = []
-    labels = []
+    states, labels = [], []
+    data_size = len(data)
+    cont = 0
 
     for input in data:
         states.append(np.array(input.get("State", [])))
         labels.append(np.array(input.get("Labels", [])))
 
+        cont += 1
+        if verbose: load_simbol(cont, data_size, text= 'Datos cargados: ')
+
     return np.stack(states), np.stack(labels)
 
-def load_data_from_json(file_path):
+def load_data_from_json(file_path: str, verbose: bool = True) -> dict:
     """
     The purpose of this function is to load data from a JSON file.
 
@@ -60,7 +61,9 @@ def load_data_from_json(file_path):
     # Load JSON data from the specified file
     with open(file_path, 'r') as file:
         json_data = json.load(file)
-
+    
+    data_size = len(json_data)
+    cont = 0
     # Process the data
     for states in json_data:
         state_len = str(len(states['States']))
@@ -69,5 +72,8 @@ def load_data_from_json(file_path):
         else:
             data[state_len]['States'].append(states['States'])
             data[state_len]['Labels'].append(states['Labels'])
+        
+        cont += 1
+        if verbose: load_simbol(cont, data_size, text= 'Datos cargados: ')
 
     return data
