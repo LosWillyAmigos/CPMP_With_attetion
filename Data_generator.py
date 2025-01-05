@@ -17,15 +17,17 @@ from keras.api.models import Model
 from urllib.parse import quote_plus
 from dotenv import load_dotenv
 from typing import Callable
+import pymongo
 import getpass
 import sys
 
 SYSTEM = os.name
 
-def delete_terminal_lines(lines: int) -> None:
+def delete_terminal_lines(lines: int):
     for _ in range(lines):
         sys.stdout.write("\033[F")
         sys.stdout.write("\033[K")
+    sys.stdout.flush()
 
 def clear_terminal() -> None:
     if SYSTEM == 'nt':
@@ -139,8 +141,8 @@ def install_data_route(route) -> None:
 
 def install_program() -> None:
     json_route, model_route = install_environment()
-    if not os.path.exists(model_route): install_data_route(MODEL_ROUTE)
-    if not os.path.exists(json_route): install_data_route(JSON_DATA_ROUTE)
+    if not os.path.exists(model_route): install_data_route(model_route)
+    if not os.path.exists(json_route): install_data_route(json_route)
 
 if not os.path.exists('.env'): install_program()
 
@@ -369,6 +371,41 @@ def change_model_route_menu() -> None:
     input('Pulse Enter para continuar')
     MODEL_ROUTE = model_route
 
+def show_data_bases(client: pymongo.MongoClient) -> dict:
+    data_bases = dict()
+    i = 1
+
+    print('|*|********| Bases de datos disponibles |*********|*|')
+    for data_base in client.list_database_names():
+        if data_base == 'admin' or data_base == 'config' or data_base == 'local': continue
+
+        if len(data_base) > 39:print(f'|*| {i}) {data_base[:39]}... |*|')
+        else: print(f'|*| {i}) {data_base}{" " * (42 - len(data_base))} |*|')
+
+        data_bases.update({i: data_base})
+        i += 1
+    print('|*|***********| CPMP_With_Attention |*************|*|')
+    print('')
+
+    if len(data_bases): return data_bases
+    else: return None
+
+def show_collections(client: pymongo.MongoClient, data_base_name: str) -> list:
+    collections = dict()
+    i = 1
+
+    print('|*|**********| Colecciones disponibles |**********|*|')
+    for collection in client[data_base_name].list_collection_names():
+        if len(collection) > 39: print(f'|*| {i}) {collection[:39]}... |*|')
+        else: print(f'|*| {i}) {collection}{" " * (42 - len(collection))} |*|')
+
+        collections.update({i: collection})
+        i += 1
+    print('|*|************| CPMP_With_Attention |************|*|')
+    print('')
+    if len(collections): return collections
+    return None
+
 def save_data_mongo_menu(data: list, labels: list) -> bool:
     while True:
         clear_terminal()
@@ -386,18 +423,36 @@ def save_data_mongo_menu(data: list, labels: list) -> bool:
 
             return False
         
-        data_base_name = input_label('Indique el nombre de la base de datos: ', 
-                                     'Por favor, coloque un nombre válido.', 
-                                     lambda x: x in client.list_database_names())
+        data_bases = show_data_bases(client)
+        if data_bases is None: 
+            print('No hay bases de datos disponibles.')
+            input('Pulse Enter para continuar')
+            
+            client.close()
+            
+            return False
         
-        collection_name = input_label('Indique el nombre de la colección: ', 
-                                      'La colección no existe.', 
-                                      lambda x: x in client[data_base_name].list_collection_names())
+        data_base_num = input_label(f'Indique el número de la base de datos: ', 
+                                     'La base de datos no existe o el valor ingresado es invalido.',
+                                     lambda x: x.isdigit() and 0 < int(x) <= len(data_bases))
+        
+        collections = show_collections(client, data_bases[int(data_base_num)])
+        if collections is None:
+            print('No hay colecciones disponibles.')
+            input('Pulse Enter para continuar')
+            
+            client.close()
+            
+            return False
+        
+        collection_num = input_label('Indique el número de la colección: ', 
+                                     'La colección no existe o el valor ingresado es invalido.',
+                                     lambda x: x.isdigit() and 0 < int(x) <= len(collections))
 
-        data_base = client[data_base_name]
+        data_base = client[data_bases[int(data_base_num)]]
 
         print('Iniciando Guardado...')
-        if not save_data_mongo(data_base[collection_name], data, labels): 
+        if not save_data_mongo(data_base[collections[int(collection_num)]], data, labels): 
             print('Error al guardar los datos.')
             input('Pulse Enter para continuar')
             
@@ -411,7 +466,7 @@ def save_data_mongo_menu(data: list, labels: list) -> bool:
 
         return True
 
-def save_data_json_menu(data: list, labels: list) -> bool:
+def save_data_json_menu(data: list, labels: list, adapter: str) -> bool:
     while True:
         clear_terminal()
         dis_save_data_json()
@@ -428,9 +483,12 @@ def save_data_json_menu(data: list, labels: list) -> bool:
             input('Pulse Enter para continuar')
             
             return False
+        
+        if adapter == 'attentionmodel': base_path = JSON_DATA_ROUTE + 'attentional/'
+        elif adapter == 'linealmodel': base_path = JSON_DATA_ROUTE + 'lineal/'
 
         file_name = input('Indique el nombre del archivo: ')
-        if os.path.exists(JSON_DATA_ROUTE + file_name + '.json'): 
+        if os.path.exists(base_path + file_name + '.json'): 
             print('El archivo ya existe.')
             print('Si continua, el archivo será sobreescrito.')
 
@@ -442,7 +500,7 @@ def save_data_json_menu(data: list, labels: list) -> bool:
 
         print('\nIniciando Guardado...')
         try: 
-            save_data_json(data, labels, JSON_DATA_ROUTE + file_name)
+            save_data_json(data, labels, base_path + file_name)
         except Exception as e:
             print('Error al guardar los datos.\n')
             print(e)	
@@ -453,7 +511,7 @@ def save_data_json_menu(data: list, labels: list) -> bool:
         print('Datos guardados con éxito!')
         return True
 
-def save_data_menu(data: list, labels: list) -> None:
+def save_data_menu(data: list, labels: list, adapter: str) -> None:
     while True:
         clear_terminal()
         dis_save_data()
@@ -468,7 +526,7 @@ def save_data_menu(data: list, labels: list) -> None:
             continue
         
         if option == 1:
-            if not save_data_json_menu(data, labels) and try_again(): continue
+            if not save_data_json_menu(data, labels, adapter) and try_again(): continue
         if option == 2:
             if not save_data_mongo_menu(data, labels) and try_again(): continue
 
@@ -602,7 +660,7 @@ def generate_v1_menu() -> None:
         print('Datos generados con éxito!')
         act = input('Desea guardar los datos generados? (S / N) ').lower()
         if act == 's':
-            save_data_menu(data, labels)
+            save_data_menu(data, labels, adapter_selected)
         else:
             print('Datos no guardados.')
 
@@ -684,7 +742,7 @@ def generate_v2_menu() -> None:
         print('Datos generados con éxito!')
         act = input('Desea guardar los datos generados? (S / N) ').lower()
         if act == 's':
-            save_data_menu(data, labels)
+            save_data_menu(data, labels, 'attentionmodel')
         else:
             print('Datos no guardados.')
 
@@ -775,7 +833,7 @@ def generate_v3_menu() -> None:
         print('Datos generados con éxito!')
         act = input('Desea guardar los datos generados? (S / N) ').lower()
         if act == 's':
-            save_data_menu(data, labels)
+            save_data_menu(data, labels, selected_adapter)
         else:
             print('Datos no guardados.')
 
