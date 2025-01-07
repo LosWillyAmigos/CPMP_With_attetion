@@ -5,3 +5,4 @@ from attentional_cpmp.utils.hyperparameter_search.functions_optuna import load_j
 from attentional_cpmp.utils.hyperparameter_search.functions_optuna import insert_trials
 from attentional_cpmp.utils.hyperparameter_search.functions_optuna import show_importances
 from attentional_cpmp.utils.hyperparameter_search.functions_optuna import multi_objective
+from attentional_cpmp.utils.hyperparameter_search.functions_optuna import multi_objective_one_set
