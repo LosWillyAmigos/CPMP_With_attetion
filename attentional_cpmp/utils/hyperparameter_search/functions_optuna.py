@@ -388,7 +388,7 @@ def multi_objective_one_set(trial: Trial,
         del model
         clear_session()
 
-        return [val_monitor, percentage]
+        return [val_monitor, 1 - (percentage / 100)]
 
 def insert_trials(path_trials:str = None, study: Study = None) -> None:
     if path_trials is None: 
