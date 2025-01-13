@@ -178,6 +178,19 @@ def validation_optimizer_per_C(optimizers: list[OptimizerStrategy],
             "Size Sample" : []
         }
 
+    if calculate_only_solved: 
+        all_optimizers = {
+            "State" : x,
+            "Percentage" : [],
+            "Solved" : [],
+            "Size Sample" : []
+        }
+        for optimizer in optimizers_name:
+            all_optimizers[f'{optimizer} - Mean'] = []
+            all_optimizers[f'{optimizer} - Median'] = []
+            all_optimizers[f'{optimizer} - Min'] = []
+            all_optimizers[f'{optimizer} - Max'] = []
+        
     for n in x:
         costs = []
         for i, optimizer in enumerate(optimizers):
@@ -189,30 +202,39 @@ def validation_optimizer_per_C(optimizers: list[OptimizerStrategy],
             costs.append(cost)
             excel_content[optimizers_name[i]]["Time"].append(f'{delta:.12f}')
 
-        if calculate_only_solved:
-            counter_solved = calculate_solved(costs, sample_size)
-            final_costs = get_final_costs(costs, counter_solved, sample_size, len(optimizers))
-        else:
-            final_costs = costs
-
         for i, optimizer in enumerate(optimizers):
-            results, mean_steps, median_steps, min_steps, max_steps = get_statics(final_costs[i], 6, sample_size)
+            results, mean_steps, median_steps, min_steps, max_steps = get_statics(costs[i], 6, sample_size)
             excel_content[optimizers_name[i]]["Percentage"].append(results)
             excel_content[optimizers_name[i]]["Mean"].append(mean_steps)
             excel_content[optimizers_name[i]]["Median"].append(median_steps)
             excel_content[optimizers_name[i]]["Min"].append(min_steps)
             excel_content[optimizers_name[i]]["Max"].append(max_steps)
-            excel_content[optimizers_name[i]]["Solved"].append(len(final_costs[i]))
-            if calculate_only_solved:
-                excel_content[optimizers_name[i]]["Size Sample"].append(len(final_costs[i]))
-            else: 
-                excel_content[optimizers_name[i]]["Size Sample"].append(sample_size)
+            excel_content[optimizers_name[i]]["Solved"].append(len([v for v in costs[i] if v!=-1]))
+            excel_content[optimizers_name[i]]["Size Sample"].append(sample_size)
+
+        if calculate_only_solved: 
+            counter_solved = calculate_solved(costs, sample_size)
+            final_costs = get_final_costs(costs, counter_solved, sample_size, len(optimizers))
+
+            
+            all_optimizers["Percentage"].append(len([v for v in final_costs[0] if v!=-1]) / sample_size * 100)
+            all_optimizers["Solved"].append(len(final_costs[0]))
+            all_optimizers["Size Sample"].append(sample_size)
+            for i, optimizer in enumerate(optimizers_name):
+                results, mean_steps, median_steps, min_steps, max_steps = get_statics(final_costs[i], 6, sample_size)
+                all_optimizers[f'{optimizer} - Mean'].append(mean_steps)
+                all_optimizers[f'{optimizer} - Median'].append(median_steps)
+                all_optimizers[f'{optimizer} - Min'].append(min_steps)
+                all_optimizers[f'{optimizer} - Max'].append(max_steps)
 
     # Crear un único archivo Excel con múltiples hojas
     with pd.ExcelWriter(f'{excel_path}{model_name}_STATE_{S}_N_CONTAINERS.xlsx', engine='openpyxl') as writer:
         for name in optimizers_name:
             df = pd.DataFrame(excel_content[name])
             df.to_excel(writer, sheet_name=name, index=False)
+        if calculate_only_solved:
+            df = pd.DataFrame(all_optimizers)
+            df.to_excel(writer, sheet_name="All optimizers", index=False)
 
 
     if create_plot:
@@ -223,6 +245,15 @@ def validation_optimizer_per_C(optimizers: list[OptimizerStrategy],
             plt.title(f'Porcentaje de acierto en relación N - {model_name} - {optimizers_name[i]}')
             plt.grid(True)
             plt.savefig(f'{path_plot}{model_name}_{optimizers_name[i]}_TO_STATE_{S}_N_CONTAINERS_PLOT.png')
+            plt.close()
+
+        if calculate_only_solved:
+            plt.plot(x, all_optimizers["Percentage"], marker='o')
+            plt.xlabel('N - Cantidad de contenedores')
+            plt.ylabel('Porcentaje')
+            plt.title(f'Porcentaje de acierto en relación N - {model_name} - Para todos los optimizadores')
+            plt.grid(True)
+            plt.savefig(f'{path_plot}{model_name}_ALL_OPTIMIZERS_TO_STATE_{S}_N_CONTAINERS_PLOT.png')
             plt.close()
 
 def validation_optimizer_per_stack(optimizers: list[OptimizerStrategy],
@@ -241,7 +272,7 @@ def validation_optimizer_per_stack(optimizers: list[OptimizerStrategy],
                                 optimizers_name=optimizers_name,
                                 S=[int(state) for state in S],
                                 H=H,
-                                N=None,
+                                N=N,
                                 sample_size=sample_size,
                                 excel_path=excel_path,
                                 calculate_only_solved=calculate_only_solved,
@@ -266,9 +297,11 @@ def validation_optimizer_per_S(optimizers: list[OptimizerStrategy],
     os.makedirs(excel_path, exist_ok=True)
     lays_S = []
 
+    S.sort()
+
     if N is not None:
         for s in S:
-            lays_S.append([generate_random_layout(s, H, N) for _ in range(sample_size)])
+            lays_S.append([generate_random_layout(s, H, s*(H-2)) for _ in range(sample_size)])
     elif N is None:
         for s in S:
             lays_S.append([generate_random_layout(s, H, random.randint(s * 2, (s * (H - 2)))) for _ in range(sample_size)])
@@ -287,6 +320,19 @@ def validation_optimizer_per_S(optimizers: list[OptimizerStrategy],
             "Size Sample" : []
         }
 
+    if calculate_only_solved: 
+        all_optimizers = {
+            "State" : S,
+            "Percentage" : [],
+            "Solved" : [],
+            "Size Sample" : []
+        }
+        for optimizer in optimizers_name:
+            all_optimizers[f'{optimizer} - Mean'] = []
+            all_optimizers[f'{optimizer} - Median'] = []
+            all_optimizers[f'{optimizer} - Min'] = []
+            all_optimizers[f'{optimizer} - Max'] = []
+
     for s in range(len(S)):
         costs = []
         for i, optimizer in enumerate(optimizers):
@@ -299,30 +345,38 @@ def validation_optimizer_per_S(optimizers: list[OptimizerStrategy],
             costs.append(cost)
             excel_content[optimizers_name[i]]["Time"].append(f'{delta:.12f}')
 
-        if calculate_only_solved:
-            counter_solved = calculate_solved(costs, sample_size)
-            final_costs = get_final_costs(costs, counter_solved, sample_size, len(optimizers))
-        else:
-            final_costs = costs
-
         for i, optimizer in enumerate(optimizers):
-            results, mean_steps, median_steps, min_steps, max_steps = get_statics(final_costs[i], 6, sample_size)
+            results, mean_steps, median_steps, min_steps, max_steps = get_statics(costs[i], 6, sample_size)
             excel_content[optimizers_name[i]]["Percentage"].append(results)
             excel_content[optimizers_name[i]]["Mean"].append(mean_steps)
             excel_content[optimizers_name[i]]["Median"].append(median_steps)
             excel_content[optimizers_name[i]]["Min"].append(min_steps)
             excel_content[optimizers_name[i]]["Max"].append(max_steps)
-            excel_content[optimizers_name[i]]["Solved"].append(len(final_costs[i]))
-            if calculate_only_solved:
-                excel_content[optimizers_name[i]]["Size Sample"].append(len(final_costs[i]))
-            else: 
-                excel_content[optimizers_name[i]]["Size Sample"].append(sample_size)
+            excel_content[optimizers_name[i]]["Solved"].append(len([v for v in costs[i] if v!=-1]))
+            excel_content[optimizers_name[i]]["Size Sample"].append(sample_size)
+
+        if calculate_only_solved: 
+            counter_solved = calculate_solved(costs, sample_size)
+            final_costs = get_final_costs(costs, counter_solved, sample_size, len(optimizers))
+            
+            all_optimizers["Percentage"].append(len([v for v in final_costs[0] if v!=-1]) / sample_size * 100)
+            all_optimizers["Solved"].append(len(final_costs[0]))
+            all_optimizers["Size Sample"].append(sample_size)
+            for i, optimizer in enumerate(optimizers_name):
+                results, mean_steps, median_steps, min_steps, max_steps = get_statics(final_costs[i], 6, sample_size)
+                all_optimizers[f'{optimizer} - Mean'].append(mean_steps)
+                all_optimizers[f'{optimizer} - Median'].append(median_steps)
+                all_optimizers[f'{optimizer} - Min'].append(min_steps)
+                all_optimizers[f'{optimizer} - Max'].append(max_steps)
 
     # Crear un único archivo Excel con múltiples hojas
     with pd.ExcelWriter(f'{excel_path}{model_name}_STATE_{S}_S_STACKS.xlsx', engine='openpyxl') as writer:
         for name in optimizers_name:
             df = pd.DataFrame(excel_content[name])
             df.to_excel(writer, sheet_name=name, index=False)
+        if calculate_only_solved:
+            df = pd.DataFrame(all_optimizers)
+            df.to_excel(writer, sheet_name="All optimizers", index=False)
 
 
     if create_plot:
@@ -333,6 +387,14 @@ def validation_optimizer_per_S(optimizers: list[OptimizerStrategy],
             plt.title(f'Porcentaje de acierto en relación S - {model_name} - {optimizers_name[i]}')
             plt.grid(True)
             plt.savefig(f'{path_plot}{model_name}_{optimizers_name[i]}_TO_STATE_{S}_S_STACKS_PLOT.png')
+            plt.close()
+        if calculate_only_solved:
+            plt.plot(S, all_optimizers["Percentage"], marker='o')
+            plt.xlabel('S -STACKS')
+            plt.ylabel('Porcentaje')
+            plt.title(f'Porcentaje de acierto en relación S - {model_name} - Para todos los optimizadores')
+            plt.grid(True)
+            plt.savefig(f'{path_plot}{model_name}_ALL_OPTIMIZERS_TO_STATE_{S}_S_STACKS_PLOT.png')
             plt.close()
 
 

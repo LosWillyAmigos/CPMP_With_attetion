@@ -80,7 +80,7 @@ if __name__ == "__main__":
     if args.path_good_params is not None:
         insert_trials(path_trials=args.path_good_params, study=study)
     
-    data = load_data_from_json(args.path_data)
+        data = load_data_from_json(args.path_data)
 
     X_train, y_train = get_data(data=data, key=args.S)
     

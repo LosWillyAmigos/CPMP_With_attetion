@@ -2,6 +2,7 @@ from attentional_cpmp.model import create_model
 from attentional_cpmp.utils.data_saving import load_data_from_json
 from attentional_cpmp.validations import validation_optimizer_per_container
 from attentional_cpmp.validations import validation_optimizer_per_stack
+from attentional_cpmp.utils import get_config_model
 
 from cpmp_ml.optimizer import GreedyV2
 from cpmp_ml.optimizer import GreedyModel
@@ -79,37 +80,13 @@ def train_with_batches(model, data, states, batch_size, epochs, max_samples=None
 
     return history
 
-def get_params(dictionary, H):
-
-    new_dictionary = {}
-    new_dictionary['H'] = H
-    new_dictionary['metrics'] = ['mae', 'mse', 'accuracy']
-    new_dictionary['optimizer'] = 'Adam'
-    new_dictionary['loss'] = 'binary_crossentropy'
-
-    new_dictionary['num_stacks'] = dictionary['num_stacks']
-    new_dictionary['num_heads'] = dictionary['num_heads']
-    new_dictionary['epsilon'] = dictionary['epsilon']
-    new_dictionary['key_dim'] = dictionary['key_dim']
-    new_dictionary['value_dim'] = dictionary['value_dim']
-    new_dictionary['dropout'] = dictionary['dropout']
-    new_dictionary['rate'] = dictionary['rate']
-    new_dictionary['activation_hide'] = dictionary['activation_hide']
-    new_dictionary['activation_feed'] = dictionary['activation_feed']
-
-    new_dictionary['n_dropout_hide'] = dictionary['n_dropout_hide']
-    new_dictionary['n_dropout_feed'] = dictionary['n_dropout_feed']
-    new_dictionary['list_neurons_feed'] = dictionary['list_neurons_feed']
-    new_dictionary['list_neurons_hide'] = dictionary['list_neurons_hide']
-
-    return new_dictionary
 
 def main():
     parser = argparse.ArgumentParser(description="Entrenamiento de modelos de Keras basado en un archivo JSON de hiperparámetros.")
     parser.add_argument("--json_path", required=True, help="Ruta al archivo JSON con los hiperparámetros.")
     parser.add_argument("--data_path", required=True, help="Ruta al archivo JSON con los datos.")
     parser.add_argument("--output_dir", required=True, help="Directorio de salida para guardar modelos, imágenes y el archivo Excel.")
-    parser.add_argument("--excel_name", required=True, default="statics.xlsx", help="Nombre del archivo Excel de estadísticas (sin ruta).")
+    parser.add_argument("--excel_name", required=False, default="statics.xlsx", help="Nombre del archivo Excel de estadísticas (sin ruta).")
     parser.add_argument("--batch_size", type=int, default=32, help="Tamaño del batch para entrenamiento.")
     parser.add_argument("--sample_size", type=int, default=1000, help="Tamaño del batch para validación.")
     parser.add_argument("--epochs", type=int, default=10, help="Número de épocas de entrenamiento.")
@@ -134,7 +111,7 @@ def main():
     for hyperparams in hyperparams_list:
         os.makedirs(args.output_dir + hyperparams['name'] + '/', exist_ok=True)
         print(f"Entrenando modelo {hyperparams['name']}...")
-        model = create_model(**get_params(hyperparams, hyperparams['H']))
+        model = create_model(**get_config_model(hyperparams))
 
         states = list(data.keys())
         excel_path = f"{args.output_dir + hyperparams['name'] + '/' +  args.excel_name}"
@@ -148,7 +125,7 @@ def main():
                                         max_samples=args.max_samples, 
                                         metrics = hyperparams['metrics'])
             create_statistics(history, excel_path)
-        else:
+        elif args.training_with_batches == 0:
             if args.max_samples is not None:
                 for state in states:
                     data[state]["States"] = data[state]["States"][:args.max_samples]
@@ -159,12 +136,13 @@ def main():
                                     callbacks=[EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)])
                 data.get(stack)
                 create_statistics_2(history.history, args.output_dir + hyperparams['name'] + '_' + args.excel_name, str(stack))
-        
+
         print("Guardando modelo y estadísticas...")
         model.save(f"{args.output_dir + hyperparams['name'] + '/' + hyperparams["name"]}.keras")
         model.save(f"{args.output_dir + hyperparams['name'] + '/' + hyperparams["name"]}.h5")
 
         print("Generando gráficas...")
+        
         validation_optimizer_per_container(optimizers=[GreedyModel(model=model, data_adapter=AttentionModel()), GreedyV2()],
                                            optimizers_name=["GreedyModel", "Greedy2"],
                                            S=states,
@@ -177,12 +155,13 @@ def main():
                                        optimizers_name=["GreedyModel", "Greedy2"],
                                        S=states,
                                        H=hyperparams["H"],
-                                       N=None,
+                                       N=1,
                                        sample_size=args.sample_size,
                                        output_dir=args.output_dir + hyperparams['name'] + '/',
                                        calculate_only_solved=True,
                                        hyperparameter_name=hyperparams["name"])
         clear_session()
         gc.collect()
+        
 if __name__ == "__main__":
     main()
