@@ -7,13 +7,14 @@ from attentional_cpmp.utils.train_model import normal_training, batch_training
 from cpmp_ml.utils.adapters import AttentionModel
 from cpmp_ml.optimizer import GreedyModel
 
-from keras.callbacks import EarlyStopping
-from keras.backend import clear_session
+from keras.api.callbacks import EarlyStopping
+from keras.api.backend import clear_session
 
 from optuna import Trial
 from optuna import Study
 from optuna.integration import TFKerasPruningCallback
 from optuna.importance import get_param_importances
+from optuna.exceptions import TrialPruned
 
 from typing import Any
 
@@ -50,6 +51,9 @@ def objective(trial: Trial,
               validation_split: float,
               use_saver_callbacks: bool,
               dir_callbacks: str | None = None) -> float:
+
+        X_train_copy = np.copy(X_train)
+        Y_train_copy = np.copy(Y_train)
       
         num_stacks = trial.suggest_int('num_stacks', 1, max_num_stacks, step=step)
         num_heads = trial.suggest_int('num_heads', 1, max_num_heads, step=step)
@@ -72,7 +76,10 @@ def objective(trial: Trial,
         list_neurons_feed = [trial.suggest_int(f'list_neurons_feed_{i}', 1, max_units_neurons_feed) for i in range(num_neurons_layers_feed)]
         list_neurons_hide = [trial.suggest_int(f'list_neurons_hide_{i}', 1, max_units_neurons_hide) for i in range(num_neurons_layers_hide)]
 
-        model = create_model(H=H,
+        try:
+            clear_session()
+
+            model = create_model(H=H,
                             key_dim=key_dim,
                             value_dim=value_dim,
                             num_heads=num_heads,
@@ -89,59 +96,69 @@ def objective(trial: Trial,
                             optimizer=optimizer,
                             loss=loss,
                             metrics=metrics)
+    
       
-        callbacks = []
-        
-        pruning_callback = TFKerasPruningCallback(trial, monitor)
-        early_stopping_callback = EarlyStopping(
-            monitor= monitor,  
-            patience=patience,         
-            mode='min',          
-            verbose=verbose,          
-            restore_best_weights=restore_best_weights
-        )
-        
-        callbacks.append(pruning_callback)
-        callbacks.append(early_stopping_callback)
-        
-        if use_saver_callbacks:
-            os.makedirs(dir_callbacks, exist_ok=True)
-            best_hyp_saver = BestHyperparameterSaver(trial, 
-                                                    monitor=monitor, 
-                                                    filename=dir_callbacks + "/best_hyp.json",
-                                                    metrics=metrics)
+            callbacks = []
             
-            all_saver = HyperparameterSaver(trial,
-                                            monitor=monitor,
-                                            filename=dir_callbacks + "/all_hyp.json",
-                                            metrics=metrics)
-            callbacks.append(best_hyp_saver)
-            callbacks.append(all_saver)
+            pruning_callback = TFKerasPruningCallback(trial, monitor)
+            early_stopping_callback = EarlyStopping(
+                monitor= monitor,  
+                patience=patience,         
+                mode='min',          
+                verbose=verbose,          
+                restore_best_weights=restore_best_weights
+            )
+            
+            callbacks.append(pruning_callback)
+            callbacks.append(early_stopping_callback)
+            
+            if use_saver_callbacks:
+                os.makedirs(dir_callbacks, exist_ok=True)
+                best_hyp_saver = BestHyperparameterSaver(trial, 
+                                                        monitor=monitor, 
+                                                        filename=dir_callbacks + "/best_hyp.json",
+                                                        metrics=metrics)
+                
+                all_saver = HyperparameterSaver(trial,
+                                                monitor=monitor,
+                                                filename=dir_callbacks + "/all_hyp.json",
+                                                metrics=metrics)
+                callbacks.append(best_hyp_saver)
+                callbacks.append(all_saver)
       
-        try:
-            history = model.fit(x=X_train, 
-                                y=Y_train, 
-                                epochs=epochs, 
-                                batch_size=batch_size, 
-                                verbose=verbose, 
-                                validation_split=validation_split,
-                                callbacks=callbacks)
+            if np.any(X_train_copy) == None or np.any(Y_train_copy) == None:
+                raise ValueError("Something of the data has value None.")
+        
+            history = model.fit(X_train_copy, Y_train_copy, epochs=epochs, 
+                                batch_size=batch_size, verbose=verbose, 
+                                validation_split=validation_split, callbacks=callbacks)
+            
+            clear_session()
+            val_monitor = history.history[monitor][-1]
+
+            trial.set_user_attr("history", history.history)
+            trial.set_user_attr("monitor", val_monitor)
+
+            return val_monitor
         except (ValueError, 
                 MemoryError, 
                 RuntimeError, 
-                tf.errors.ResourceExhaustedError) as e:
-            print(f"Error en la optimización: {e}")
-            raise e
-      
-        val_loss = history.history[monitor][-1]
+                tf.errors.ResourceExhaustedError,
+                Exception) as e:      
 
-        trial.set_user_attr("history", history.history)
+            # Manejar errores
+            print(f"Error en el ensayo {trial.number}: {e}")
+            
+            # Registrar el ensayo como fallido
+            trial.set_user_attr("failed", True)
 
-        del model
+            # Limpieza adicional
+            clear_session()
+            
+            # Opcional: Propagar el error para que Optuna lo marque como fallo automáticamente
+            raise TrialPruned(f"Ensayo fallido: {e}")
 
-        clear_session()
-
-        return val_loss
+        
 
 def multi_objective(trial: Trial,
               max_num_stacks: int,

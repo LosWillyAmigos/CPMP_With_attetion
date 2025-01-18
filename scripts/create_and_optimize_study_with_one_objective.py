@@ -11,40 +11,38 @@ from attentional_cpmp.validations import PercentageSolved
 import argparse
 import tensorflow as tf
 import os
+import random
 
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="Argumentos para cargar un backend de optuna")
     
-    parser.add_argument('study_name',
+    parser.add_argument('--study_name',
                         type=str,
                         help="Nombre del estudio a cargar")
-    parser.add_argument('storage_name',
+    parser.add_argument('--storage_name',
                         type=str,
                         help="Ruta del backend")
-    parser.add_argument('path_data',
+    parser.add_argument('--path_data',
                         type=str,
                         help="Ruta de los datos")
-    parser.add_argument('dim_data',
+    parser.add_argument('--dim_data',
                         type=str,
                         help="Dimensión de los datos a recuperar")
-    parser.add_argument('H',
+    parser.add_argument('--H',
                         type=int,
                         help="Dimensión del modelo")
-    parser.add_argument('validation_split',
-                        type=float,
-                        help="porcentaje de validación")
-    parser.add_argument('path_config_model',
+    parser.add_argument('--path_config_model',
                         type=str,
                         help="Ruta de la configuración del modelo")
-    parser.add_argument('path_config_callbacks',
+    parser.add_argument('--path_config_callbacks',
                         type=str,
                         help="Ruta de la configuración de los callbacks")
-    parser.add_argument('path_config_max_trials',
+    parser.add_argument('--path_config_max_trials',
                         type=str,
                         help="Ruta de la configuración de los valores máximos de los trials")
     
-    parser.add_argument('path_good_params',
+    parser.add_argument('--path_good_params',
                         type=str,
                         required=False,
                         help="Ruta de los parametros buenos",
@@ -59,6 +57,11 @@ if __name__ == "__main__":
                         help="Cantidad de trabajos en paralelo",
                         required=False,
                         default=1)
+    parser.add_argument('--max_samples',
+                        type=int,
+                        help="Cantidad máxima de datos",
+                        required=False,
+                        default=0)
     
     
     args = parser.parse_args()
@@ -74,6 +77,10 @@ if __name__ == "__main__":
     
     data_Sx7 = load_data_from_json(args.path_data)
     X_train, Y_train = get_data(data_Sx7, args.dim_data)
+
+    if args.max_samples > 0:
+        start = random.randint(0, (X_train.shape[0] - args.max_samples))
+        X_train, Y_train = X_train[start : start + args.max_samples], Y_train[start : start + args.max_samples]
     
     config_model = load_json(args.path_config_model)
     config_model["metrics"].append(PercentageSolved())
