@@ -3,9 +3,12 @@ from attentional_cpmp.utils import connect_to_server
 from attentional_cpmp.model import load_cpmp_model
 from attentional_cpmp.optimizer import BeamSearch
 from cpmp_ml.utils.adapters import AttentionModel
-from cpmp_ml.optimizer import OptimizerStrategy, GreedyModel, GreedyV1, GreedyV2
+from cpmp_ml.optimizer import OptimizerStrategy
+from cpmp_ml.optimizer import GreedyModel
+from cpmp_ml.optimizer import GreedyV1
+from cpmp_ml.optimizer import GreedyV2
 from cpmp_ml.utils import Layout
-from keras.models import Model
+from keras.src.models import Model
 from statistics import mean
 import pandas as pd
 import numpy as np
