@@ -1,12 +1,20 @@
+import os
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from attentional_cpmp.model import load_cpmp_model
 from cpmp_ml.utils.adapters import AttentionModel
 from cpmp_ml.utils.adapters import LinealModel
+from cpmp_ml.utils.adapters import DataAdapter
+from cpmp_ml.optimizer import GreedyModel
+from cpmp_ml.optimizer import GreedyV1
+from cpmp_ml.optimizer import GreedyV2
 from keras.src.models import Model
 from cpmp_ml.utils import Layout
 from dotenv import load_dotenv
 from typing import Callable
+import pandas as pd
+import numpy as np
 import sys
-import os
 
 SYSTEM = os.name
 
@@ -125,9 +133,10 @@ def dis_show_directories() -> None:
     print('|*|****************| CPMP_With_Attention |*****************|*|')
     print('')
 
-def read_benchmark_file(route: str, H: int) -> tuple[Layout, int, int]:
+def read_benchmark_file(route: str, H: int | None = None) -> tuple[Layout, int, int, int]:
     with open(route) as file:
         S, N = (int(x) for x in next(file).split())
+        if H is None: H = (N / S) + 2
 
         stacks = []
         for line in file:
@@ -136,7 +145,7 @@ def read_benchmark_file(route: str, H: int) -> tuple[Layout, int, int]:
         
         lay = Layout(stacks, H)
 
-    return lay, S, N
+    return lay, S, H, N
 
 def change_model_route_menu() -> None:
     global MODEL_ROUTE
@@ -279,19 +288,53 @@ def show_benchmarks_directories() -> str:
     
     return temp[test_type] + '/' + benchmarks[opt]
 
-def run_test() -> None:
+def read_optimal_solution(route: str) -> int | pd.DataFrame:
+    if route.endswith('.bay'):
+        with open(route, 'r') as file:
+            optimal = int(file.readline())
+    elif route.endswith('.xlsx'):
+        optimal = pd.read_excel(route, usecols='A:B')
+        
+    return optimal
+
+def load_problems(path: str, total_problems: int, H: int | None = None) -> tuple[list[Layout], int, int, int, int | pd.DataFrame]:
+    problems = []
+    cont = 0
+
+    for file in os.scandir(path):
+        if cont == total_problems: break
+        if file.is_file() and (file.name.endswith('.txt') or file.name.endswith('.xlsx')):
+            optimal = read_optimal_solution(file.path)
+        if file.is_file() and (file.name.endswith('.dat') or file.name.endswith('.bay')):
+            lay, S, H, N = read_benchmark_file(file.path, H)
+            problems.append(lay)
+
+            cont += 1
+
+    return problems, S, H, N, optimal
+
+def run_experiments(
+        problems: list[Layout], 
+        problems_name: str, 
+        S: int, 
+        H: int, 
+        N: int, 
+        optimal: int | pd.DataFrame,
+        model: Model,
+        adapter: DataAdapter
+) -> None:
+    greedy1 = GreedyV1()
+    greedy2 = GreedyV2()
+    greedy_model = GreedyModel(model, adapter)
+
+    cost_g1 = greedy1.solve(np.array(problems))[0]
+    cost_g2 = greedy2.solve(np.array(problems), max_steps= N * 2)[0]
+    cost_gmodel = greedy_model.solve(np.array(problems), max_steps= N * 2)[0]
+
+    print(f'Costo Greedy 1: {cost_g1}')
+    print(f'Costo Greedy 2: {cost_g2}')
+    print(f'Costo Greedy Model: {cost_gmodel}')
     pass
-
-def load_problems(path: str, total_problems: int, H: int) -> None:
-    files = os.listdir(path)
-
-    for i in range(0, total_problems + 1):
-        if not files[i].endswith('.bay') or files[i].endswith('.dat'): continue
-        lay, S, N = read_benchmark_file(f'{path}{files[i]}', H)
-        
-        
-
-    return
 
 def saved_model_test():
     while True:
@@ -317,19 +360,11 @@ def saved_model_test():
                                         f'Por favor, coloque un número entero entre el 1 y el {total_cases}.',
                                         lambda x: x.isdigit() and 1 <= int(x) <= total_cases))
         
-        H = int(input_label('De que altura son los problemas? (H ≥ 3) ', 
-                            'Por favor, coloque un número entero.', 
-                            lambda x: x.isdigit() and int(x) >= 3))
-        
-        S = int(input_label('De cuantos stacks son los problemas? (S ≥ 3) ', 
-                            'Por favor, coloque un número entero.', 
-                            lambda x: x.isdigit() and int(x) >= 3))
-        
         selected_adapter = input_label('Que adaptador necesitas? (AttentionModel, LinealModel) ', 
                                       'Por favor, coloque un adaptador válido.', 
                                       lambda x: x.lower() in ['attentionmodel', 'linealmodel']).lower()
 
-        verbose = input_label('Desea ver la cantidad de datos generados durante la ejecución? (S / N) ', 
+        verbose = input_label('Desea ver la cantidad de datos predichos durante la ejecución? (S / N) ', 
                              'Por favor, coloque una opción válida.', 
                              lambda x: x.lower() in ['s', 'n']).lower()
         
@@ -344,15 +379,15 @@ def saved_model_test():
         if selected_adapter == 'attentionmodel': adapter = AttentionModel()
         elif selected_adapter == 'linealmodel': adapter = LinealModel()
 
+        problems, S, H, N, optimal = load_problems(f'{BENCHMARK_ROUTE}{directory}/', size_problems)
+        
         model = select_model(S, H, selected_adapter)
         if model is None: 
             if try_again(): continue
             else: break
 
-        problems = load_problems(f'{BENCHMARK_ROUTE}{directory}/', size_problems, H)
-
-        input()
-        
+        run_experiments(problems, directory, S, H, N, optimal, model, adapter)
+          
 def main_menu():
     try:
         while True:
@@ -364,7 +399,7 @@ def main_menu():
                                       lambda x: x.isdigit() and 1 <= int(x) <= 5))
             
             if option == 1:
-                continue
+                saved_model_test()
             elif option == 2:
                 continue
             elif option == 3:
@@ -379,4 +414,4 @@ def main_menu():
         exit()
 
 if __name__ == '__main__':
-    saved_model_test()
+    read_optimal_solution('.\\benchmarks\\CVS\\3-4\\Data3-4.xlsx')
