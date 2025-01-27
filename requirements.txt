@@ -10,5 +10,6 @@ optuna-integration==3.6.0
 python-dotenv==1.0.1
 matplotlib==3.8.2
 pandas==2.2.3
+openpyxl==3.1.5
 git+https://github.com/rilianx/CPMP-ML.git@develop
 git+https://github.com/LosWillyAmigos/CPMP_With_attention.git@dev-Slinking196
